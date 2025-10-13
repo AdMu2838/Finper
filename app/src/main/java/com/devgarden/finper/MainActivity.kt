@@ -1,5 +1,6 @@
 package com.devgarden.finper
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,9 +10,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -23,9 +26,18 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             FinperTheme {
+                val context = LocalContext.current
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     FinanceWelcomeScreen(
-                        modifier = Modifier.padding(innerPadding)
+                        modifier = Modifier.padding(innerPadding),
+                        onStart = {
+                            val intent = Intent(context, FormLoginActivity::class.java)
+                            context.startActivity(intent)
+                        },
+                        onAnimateCircle = {
+                            val intent = Intent(context, CircleAnimationActivity::class.java)
+                            context.startActivity(intent)
+                        }
                     )
                 }
             }
@@ -34,7 +46,11 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun FinanceWelcomeScreen(modifier: Modifier = Modifier) {
+fun FinanceWelcomeScreen(
+    modifier: Modifier = Modifier,
+    onStart: () -> Unit = {},
+    onAnimateCircle: () -> Unit = {}
+) {
     val configuration = LocalConfiguration.current
     val isTablet = configuration.screenWidthDp >= 600
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
@@ -78,7 +94,7 @@ fun FinanceWelcomeScreen(modifier: Modifier = Modifier) {
 
                 // Botón principal
                 Button(
-                    onClick = { /* Acción para comenzar */ },
+                    onClick = onStart,
                     modifier = Modifier
                         .then(
                             if (isTablet || isLandscape) {
@@ -91,6 +107,27 @@ fun FinanceWelcomeScreen(modifier: Modifier = Modifier) {
                 ) {
                     Text(
                         text = "Comenzar",
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Botón para animar círculo
+                Button(
+                    onClick = onAnimateCircle,
+                    modifier = Modifier
+                        .then(
+                            if (isTablet || isLandscape) {
+                                Modifier.widthIn(min = 250.dp) // Ancho fijo en tablet o landscape
+                            } else {
+                                Modifier.fillMaxWidth() // Ancho completo en móvil portrait
+                            }
+                        )
+                        .height(50.dp)
+                ) {
+                    Text(
+                        text = "Animar círculo",
                         style = MaterialTheme.typography.labelLarge
                     )
                 }

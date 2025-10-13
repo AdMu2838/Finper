@@ -12,6 +12,15 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Finper">
         <activity
+            android:name=".RegisterActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FormLoginActivity"
+            android:exported="false" />
+        <activity
+            android:name=".CircleAnimationActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
