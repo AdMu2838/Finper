@@ -10,6 +10,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.devgarden.finper.ui.theme.FinperTheme
@@ -43,6 +44,16 @@ fun RegisterForm() {
     var goal by remember { mutableStateOf("Ahorro") }
     val goalOptions = listOf("Ahorro", "Salir de deudas", "Invertir", "Control de gastos", "Otro")
     var showSuccess by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Lanzar navegación cuando showSuccess sea true
+    if (showSuccess) {
+        LaunchedEffect(Unit) {
+            kotlinx.coroutines.delay(1200)
+            val intent = android.content.Intent(context, FormLoginActivity::class.java)
+            context.startActivity(intent)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -150,7 +161,7 @@ fun RegisterForm() {
         if (showSuccess) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "¡Registro exitoso! Ahora puedes iniciar sesión.",
+                text = "¡Registro exitoso! Redirigiendo al login...",
                 color = MaterialTheme.colorScheme.primary,
                 style = MaterialTheme.typography.bodyLarge
             )

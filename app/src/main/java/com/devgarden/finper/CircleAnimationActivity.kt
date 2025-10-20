@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.devgarden.finper.ui.theme.FinperTheme
 
@@ -38,7 +39,7 @@ fun CircleAnimationScreen() {
     var expanded by remember { mutableStateOf(false) }
     val circleSize by animateDpAsState(
         targetValue = if (expanded) 200.dp else 80.dp,
-        animationSpec = tween(durationMillis = 600),
+        animationSpec = tween(durationMillis = 10000),
         label = "circleSize"
     )
 
@@ -57,6 +58,13 @@ fun CircleAnimationScreen() {
         Button(onClick = { expanded = !expanded }) {
             Text(if (expanded) "Reducir círculo" else "Expandir círculo")
         }
+        Spacer(modifier = Modifier.height(16.dp))
+        val context = LocalContext.current
+        Button(onClick = {
+            val intent = android.content.Intent(context, ExpenseBarActivity::class.java)
+            context.startActivity(intent)
+        }) {
+            Text("Ir a barra de gastos")
+        }
     }
 }
-

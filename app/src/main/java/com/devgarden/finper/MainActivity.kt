@@ -56,81 +56,72 @@ fun FinanceWelcomeScreen(
     val isLandscape = configuration.screenWidthDp > configuration.screenHeightDp
 
     Surface(
-        modifier = modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()), // Permite scroll si el contenido no cabe
+        modifier = modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
     ) {
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(
-                    horizontal = if (isTablet) 48.dp else 24.dp,
-                    vertical = 32.dp
-                ),
-            contentAlignment = Alignment.Center
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            // Título principal
+            Text(
+                text = "Bienvenido a Finper",
+                style = if (isTablet) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineLarge,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onBackground,
+                modifier = Modifier.padding(bottom = 24.dp)
+            )
+
+            // Subtítulo descriptivo
+            Text(
+                text = "Tu asistente para controlar tus finanzas.",
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 32.dp)
+            )
+
+            // Botón principal
+            Button(
+                onClick = onStart,
+                modifier = Modifier
+                    .then(
+                        if (isTablet || isLandscape) {
+                            Modifier.widthIn(min = 250.dp) // Ancho fijo en tablet o landscape
+                        } else {
+                            Modifier.fillMaxWidth() // Ancho completo en móvil portrait
+                        }
+                    )
+                    .height(50.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
             ) {
-                // Título principal
                 Text(
-                    text = "Bienvenido a Finper",
-                    style = if (isTablet) MaterialTheme.typography.displaySmall else MaterialTheme.typography.headlineLarge,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(bottom = 24.dp)
+                    text = "Comenzar",
+                    style = MaterialTheme.typography.labelLarge
                 )
-
-                // Subtítulo descriptivo
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            // Botón de animación de círculo
+            Button(
+                onClick = onAnimateCircle,
+                modifier = Modifier
+                    .then(
+                        if (isTablet || isLandscape) {
+                            Modifier.widthIn(min = 250.dp) // Ancho fijo en tablet o landscape
+                        } else {
+                            Modifier.fillMaxWidth() // Ancho completo en móvil portrait
+                        }
+                    )
+                    .height(50.dp)
+                    .padding(horizontal = 16.dp, vertical = 4.dp)
+            ) {
                 Text(
-                    text = "Tu asistente para controlar tus finanzas.",
-                    style = MaterialTheme.typography.titleMedium,
-                    textAlign = TextAlign.Center,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(bottom = 32.dp)
+                    text = "Animación de círculo",
+                    style = MaterialTheme.typography.labelLarge
                 )
-
-                // Botón principal
-                Button(
-                    onClick = onStart,
-                    modifier = Modifier
-                        .then(
-                            if (isTablet || isLandscape) {
-                                Modifier.widthIn(min = 250.dp) // Ancho fijo en tablet o landscape
-                            } else {
-                                Modifier.fillMaxWidth() // Ancho completo en móvil portrait
-                            }
-                        )
-                        .height(50.dp)
-                ) {
-                    Text(
-                        text = "Comenzar",
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Botón para animar círculo
-                Button(
-                    onClick = onAnimateCircle,
-                    modifier = Modifier
-                        .then(
-                            if (isTablet || isLandscape) {
-                                Modifier.widthIn(min = 250.dp) // Ancho fijo en tablet o landscape
-                            } else {
-                                Modifier.fillMaxWidth() // Ancho completo en móvil portrait
-                            }
-                        )
-                        .height(50.dp)
-                ) {
-                    Text(
-                        text = "Animar círculo",
-                        style = MaterialTheme.typography.labelLarge
-                    )
-                }
             }
         }
     }

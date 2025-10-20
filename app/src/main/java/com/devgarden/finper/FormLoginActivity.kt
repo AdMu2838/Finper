@@ -36,10 +36,13 @@ fun LoginForm() {
     val configuration = LocalConfiguration.current
     val screenWidth = configuration.screenWidthDp
     val screenHeight = configuration.screenHeightDp
-    val context = LocalContext.current
 
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var loginSuccess by remember { mutableStateOf(false) }
+    var loginError by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
 
     Column(
         modifier = Modifier
@@ -56,10 +59,10 @@ fun LoginForm() {
         OutlinedTextField(
             value = username,
             onValueChange = { username = it },
-            label = { Text("Usuario") },
+            label = { Text("Correo electrónico") },
             modifier = Modifier.fillMaxWidth()
         )
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(12.dp))
         OutlinedTextField(
             value = password,
             onValueChange = { password = it },
@@ -68,19 +71,43 @@ fun LoginForm() {
             modifier = Modifier.fillMaxWidth()
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Button(onClick = { /* TODO: Acción de login */ }) {
-                Text("Ingresar")
-            }
-            Button(onClick = {
-                val intent = Intent(context, RegisterActivity::class.java)
+        Button(onClick = {
+            // Simulación de login: cualquier usuario y contraseña no vacíos es válido
+            if (username.isNotBlank() && password.isNotBlank()) {
+                loginSuccess = true
+                loginError = false
+                // Navegar a HomeActivity
+                val intent = Intent(context, HomeActivity::class.java)
                 context.startActivity(intent)
-            }) {
-                Text("Registrarse")
+            } else {
+                loginError = true
+                loginSuccess = false
             }
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text("Ingresar")
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = {
+            val intent = Intent(context, RegisterActivity::class.java)
+            context.startActivity(intent)
+        }, modifier = Modifier.fillMaxWidth()) {
+            Text("Registrarse")
+        }
+        if (loginSuccess) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "¡Inicio de sesión exitoso! Bienvenido.",
+                color = MaterialTheme.colorScheme.primary,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+        if (loginError) {
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "Usuario o contraseña inválidos.",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyLarge
+            )
         }
     }
 }
