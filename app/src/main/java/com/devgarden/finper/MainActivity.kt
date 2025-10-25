@@ -53,12 +53,8 @@ class MainActivity : ComponentActivity() {
                                             showLoginScreen = true
                                         },
                                         onRegisterClicked = {
-                                            val intent = Intent(context, RegisterActivity::class.java)
-                                            context.startActivity(intent)
                                         },
                                         onForgotPasswordClicked = {
-                                            val intent = Intent(context, FormLoginActivity::class.java)
-                                            context.startActivity(intent)
                                         }
                                     )
                                 } else {
@@ -67,8 +63,7 @@ class MainActivity : ComponentActivity() {
                                         onLoginClick = { email, password ->
                                             // Simulación simple: si email y password no están vacíos, abrir HomeActivity
                                             if (email.isNotBlank() && password.isNotBlank()) {
-                                                val intent = Intent(context, HomeActivity::class.java)
-                                                context.startActivity(intent)
+
                                             } else {
                                                 // Si quieres, aquí podríamos mostrar un Snackbar o Toast; por simplicidad no hacemos nada
                                             }
@@ -76,19 +71,15 @@ class MainActivity : ComponentActivity() {
                                         onRegisterClick = {
                                             // Volver a AuthScreen y abrir RegisterActivity
                                             showLoginScreen = false
-                                            val intent = Intent(context, RegisterActivity::class.java)
-                                            context.startActivity(intent)
                                         },
                                         onForgotPasswordClick = {
                                             // Volver a AuthScreen y abrir FormLoginActivity (simulado)
                                             showLoginScreen = false
-                                            val intent = Intent(context, FormLoginActivity::class.java)
-                                            context.startActivity(intent)
+
                                         },
                                         onGoogleLoginClick = {
                                             // Simular login con Google -> abrir Home
-                                            val intent = Intent(context, HomeActivity::class.java)
-                                            context.startActivity(intent)
+
                                         },
                                         /* onFacebookLoginClick = {
                                             // Simular login con Facebook -> abrir Home
