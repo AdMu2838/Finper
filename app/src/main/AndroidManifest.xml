@@ -24,6 +24,7 @@
             android:exported="false" />
         <activity android:name=".ExpenseBarActivity"
             android:exported="false" />
+        <activity android:name=".DynamicListActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
