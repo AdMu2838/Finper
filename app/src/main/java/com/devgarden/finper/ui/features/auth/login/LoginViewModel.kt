@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.devgarden.finper.data.AuthRepository
 import com.devgarden.finper.data.UserProfile
+import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
+import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -23,6 +25,14 @@ class LoginViewModel(
     private val _uiState = MutableStateFlow<LoginUiState>(LoginUiState.Idle)
     val uiState: StateFlow<LoginUiState> = _uiState
 
+    private fun friendlyMessageFromException(e: Throwable?): String {
+        return when (e) {
+            is FirebaseAuthInvalidCredentialsException -> "Contraseña incorrecta"
+            is FirebaseAuthInvalidUserException -> "No existe una cuenta con ese correo"
+            else -> e?.localizedMessage ?: "Error desconocido"
+        }
+    }
+
     fun signInWithGoogle(idToken: String) {
         Log.d("LoginViewModel", "start signInWithGoogle")
         _uiState.value = LoginUiState.Loading
@@ -33,8 +43,25 @@ class LoginViewModel(
                 Log.d("LoginViewModel", "signInWithGoogle success: ${profile}")
                 _uiState.value = LoginUiState.Success(profile)
             } else {
-                val err = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
+                val err = friendlyMessageFromException(result.exceptionOrNull())
                 Log.d("LoginViewModel", "signInWithGoogle error: $err")
+                _uiState.value = LoginUiState.Error(err)
+            }
+        }
+    }
+
+    fun signInWithEmailPassword(email: String, password: String) {
+        Log.d("LoginViewModel", "start signInWithEmailPassword for $email")
+        _uiState.value = LoginUiState.Loading
+        viewModelScope.launch {
+            val result = repository.signInWithEmailPassword(email, password)
+            if (result.isSuccess) {
+                val profile = result.getOrNull()!!
+                Log.d("LoginViewModel", "signInWithEmailPassword success: ${profile}")
+                _uiState.value = LoginUiState.Success(profile)
+            } else {
+                val err = friendlyMessageFromException(result.exceptionOrNull())
+                Log.d("LoginViewModel", "signInWithEmailPassword error: $err")
                 _uiState.value = LoginUiState.Error(err)
             }
         }

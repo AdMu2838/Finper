@@ -22,12 +22,18 @@ class UserViewModel : ViewModel() {
     fun cargarUsuarioActual() {
         val user = auth.currentUser
         if (user != null) {
+            // Leer la colección 'users' (la que usa AuthRepository) y mapear campos
             db.collection("users").document(user.uid)
                 .get()
                 .addOnSuccessListener { document ->
-                    val datos = document.toObject(UsuarioActual::class.java)
-                    if (datos != null) {
-                        usuario = datos
+                    if (document != null && document.exists()) {
+                        val nombre = document.getString("fullName") ?: user.displayName ?: "Usuario"
+                        val correo = document.getString("email") ?: user.email ?: ""
+                        usuario = UsuarioActual(
+                            uid = user.uid,
+                            fullName = nombre,
+                            email = correo
+                        )
                     } else {
                         // Si no está en Firestore, usar lo de FirebaseAuth
                         usuario = UsuarioActual(
@@ -37,6 +43,16 @@ class UserViewModel : ViewModel() {
                         )
                     }
                 }
+                .addOnFailureListener {
+                    // En caso de error al leer Firestore, fallback a datos de auth
+                    usuario = UsuarioActual(
+                        uid = user.uid,
+                        fullName = user.displayName ?: "Usuario",
+                        email = user.email ?: ""
+                    )
+                }
+        } else {
+            usuario = null
         }
     }
 
@@ -45,4 +61,3 @@ class UserViewModel : ViewModel() {
         usuario = null
     }
 }
-

@@ -9,12 +9,13 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+// Añadir valores por defecto para permitir deserialización con Firestore
 data class UserProfile(
-    val uid: String,
-    val fullName: String,
-    val email: String,
-    val phone: String,
-    val birthDate: Date?
+    val uid: String = "",
+    val fullName: String = "",
+    val email: String = "",
+    val phone: String = "",
+    val birthDate: Date? = null
 )
 
 class AuthRepository(
@@ -79,6 +80,47 @@ class AuthRepository(
 
             // Save/merge profile to Firestore
             firestore.collection("users").document(user.uid).set(profile).await()
+
+            Result.success(profile)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Nueva función: login con email y password
+    suspend fun signInWithEmailPassword(email: String, password: String): Result<UserProfile> {
+        return try {
+            val authResult = auth.signInWithEmailAndPassword(email.trim(), password).await()
+            val user = authResult.user ?: throw IllegalStateException("User is null after sign-in")
+
+            // Intentar obtener perfil guardado en Firestore
+            val doc = firestore.collection("users").document(user.uid).get().await()
+
+            // Primero intentamos deserializar normalmente
+            var profileFromDb: UserProfile? = null
+            try {
+                profileFromDb = doc.toObject(UserProfile::class.java)
+            } catch (_: Exception) {
+                profileFromDb = null
+            }
+
+            // Si deserialización falla o es null, leer campos individuales como fallback
+            val profile = if (profileFromDb != null) {
+                profileFromDb
+            } else {
+                val fullName = doc.getString("fullName") ?: user.displayName ?: ""
+                val emailDb = doc.getString("email") ?: user.email ?: email.trim()
+                val phone = doc.getString("phone") ?: user.phoneNumber ?: ""
+                val birthDateField = try { doc.getDate("birthDate") } catch (_: Exception) { null }
+
+                UserProfile(
+                    uid = user.uid,
+                    fullName = fullName,
+                    email = emailDb,
+                    phone = phone,
+                    birthDate = birthDateField
+                )
+            }
 
             Result.success(profile)
         } catch (e: Exception) {

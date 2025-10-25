@@ -89,6 +89,13 @@ fun AppNavigation(userViewModel: UserViewModel) {
     LaunchedEffect(loginUiState) {
         when (loginUiState) {
             is LoginUiState.Success -> {
+                // Mostrar toast de éxito con nombre si está disponible
+                val profile = (loginUiState as LoginUiState.Success).profile
+                val welcomeName = profile.fullName.ifBlank { profile.email.substringBefore("@") }
+                Toast.makeText(context, "Inicio de sesión correcto. Bienvenido, $welcomeName", Toast.LENGTH_LONG).show()
+
+                // Actualizar UserViewModel con datos del usuario actual
+                userViewModel.cargarUsuarioActual()
                 // Navegar a Home y limpiar back stack de pantallas de autenticación
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Auth.route) { inclusive = true }
@@ -165,7 +172,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
         // Pantalla 4: Login Screen
         composable(Screen.Login.route) {
             LoginScreen(
-                onLoginClick = { email, password -> /* Lógica de login */ },
+                onLoginClick = { email, password -> loginViewModel.signInWithEmailPassword(email, password) },
                 onRegisterClick = { navController.navigate(Screen.Register.route) },
                 onForgotPasswordClick = { navController.navigate(Screen.ForgotPassword.route) },
                 onGoogleLoginClick = {
