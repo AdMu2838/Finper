@@ -28,6 +28,7 @@ fun ForgotPasswordScreen(
     onNextClick: (String) -> Unit,
     onLoginClick: () -> Unit,
     onGoogleLoginClick: () -> Unit,
+    isLoading: Boolean = false,
     //onFacebookLoginClick: () -> Unit
 ) {
     var email by remember { mutableStateOf("") }
@@ -94,14 +95,19 @@ fun ForgotPasswordScreen(
 
                     // "Siguiente" Button
                     Button(
-                        onClick = { onNextClick(email) },
+                        onClick = { if (!isLoading) onNextClick(email) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                        enabled = !isLoading
                     ) {
-                        Text("Siguiente", fontSize = 18.sp, color = Color.White)
+                        if (isLoading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Text("Siguiente", fontSize = 18.sp, color = Color.White)
+                        }
                     }
 
                     // Spacer to push content to the bottom
@@ -160,6 +166,7 @@ fun ForgotPasswordScreenPreview() {
             onNextClick = {},
             onLoginClick = {},
             onGoogleLoginClick = {},
+            isLoading = false
             //onFacebookLoginClick = {}
         )
     }

@@ -17,6 +17,8 @@ import com.devgarden.finper.ui.features.launch.SplashScreen
 import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
 import com.devgarden.finper.ui.features.auth.create_account.RegisterScreen
 import com.devgarden.finper.ui.features.auth.forgot_password.ForgotPasswordScreen
+import com.devgarden.finper.ui.features.auth.forgot_password.ForgotPasswordViewModel
+import com.devgarden.finper.ui.features.auth.forgot_password.ForgotPasswordUiState
 import com.devgarden.finper.ui.features.auth.login.LoginViewModel
 import com.devgarden.finper.ui.features.auth.login.LoginUiState
 import com.devgarden.finper.ui.features.home.HomeScreen
@@ -31,6 +33,10 @@ fun AppNavigation() {
     // ViewModel para Login (usado por el flujo de Google Sign-In)
     val loginViewModel: LoginViewModel = viewModel()
     val loginUiState by loginViewModel.uiState.collectAsState(initial = LoginUiState.Idle)
+
+    // ViewModel para Forgot Password
+    val forgotViewModel: ForgotPasswordViewModel = viewModel()
+    val forgotUiState by forgotViewModel.uiState.collectAsState(initial = ForgotPasswordUiState.Idle)
 
     // Configuración de Google Sign-In
     val defaultWebClientId = try {
@@ -80,6 +86,27 @@ fun AppNavigation() {
             is LoginUiState.Error -> {
                 val msg = (loginUiState as LoginUiState.Error).message
                 Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            }
+            else -> Unit
+        }
+    }
+
+    // Observa estado de Forgot Password y muestra mensajes / navegación
+    LaunchedEffect(forgotUiState) {
+        when (forgotUiState) {
+            is ForgotPasswordUiState.Success -> {
+                Toast.makeText(context, "Se envió el correo de recuperación", Toast.LENGTH_LONG).show()
+                // Navegar a Login y limpiar back stack de Register/Forgot
+                navController.navigate(Screen.Login.route) {
+                    popUpTo(Screen.Auth.route) { inclusive = true }
+                }
+                forgotViewModel.resetState()
+            }
+            is ForgotPasswordUiState.Error -> {
+                val msg = (forgotUiState as ForgotPasswordUiState.Error).message
+                Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                // Reseteamos a Idle para permitir reintento
+                forgotViewModel.resetState()
             }
             else -> Unit
         }
@@ -171,7 +198,7 @@ fun AppNavigation() {
         // Pantalla 6: Forgot Password Screen
         composable(Screen.ForgotPassword.route) {
             ForgotPasswordScreen(
-                onNextClick = { email -> /* Lógica para siguiente paso de recuperación */ },
+                onNextClick = { email -> forgotViewModel.sendPasswordResetEmail(email) },
                 onLoginClick = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.ForgotPassword.route) { inclusive = true }
@@ -192,7 +219,8 @@ fun AppNavigation() {
                     } else {
                         Toast.makeText(context, "Configuración de Google Sign-In faltante. Revisa strings.xml y google-services.json", Toast.LENGTH_LONG).show()
                     }
-                }
+                },
+                isLoading = forgotUiState is ForgotPasswordUiState.Loading
             )
         }
 
