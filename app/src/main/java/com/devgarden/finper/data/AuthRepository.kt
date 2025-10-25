@@ -5,19 +5,33 @@ import com.google.firebase.auth.AuthResult
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 data class UserProfile(
     val uid: String,
     val fullName: String,
     val email: String,
     val phone: String,
-    val birthDate: String
+    val birthDate: Date?
 )
 
 class AuthRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    private fun parseDateOrNull(dateStr: String?): Date? {
+        if (dateStr.isNullOrBlank()) return null
+        return try {
+            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+            sdf.isLenient = false
+            sdf.parse(dateStr)
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     suspend fun registerUser(
         fullName: String,
         email: String,
@@ -28,12 +42,15 @@ class AuthRepository(
         return try {
             val authResult: AuthResult = auth.createUserWithEmailAndPassword(email.trim(), password).await()
             val user = authResult.user ?: throw IllegalStateException("User is null after registration")
+
+            val birthDateDate: Date? = parseDateOrNull(birthDate)
+
             val profile = UserProfile(
                 uid = user.uid,
                 fullName = fullName,
                 email = email.trim(),
                 phone = phone,
-                birthDate = birthDate
+                birthDate = birthDateDate
             )
             // Save profile to Firestore under collection "users" with document id = uid
             firestore.collection("users").document(user.uid).set(profile).await()
@@ -49,13 +66,15 @@ class AuthRepository(
             val authResult = auth.signInWithCredential(credential).await()
             val user = authResult.user ?: throw IllegalStateException("User is null after Google sign-in")
 
+            val birthDateDate: Date? = parseDateOrNull(birthDate)
+
             // If new user, set profile information; otherwise update or fetch
             val profile = UserProfile(
                 uid = user.uid,
                 fullName = fullName ?: user.displayName.orEmpty(),
                 email = user.email ?: "",
                 phone = phone ?: (user.phoneNumber ?: ""),
-                birthDate = birthDate ?: ""
+                birthDate = birthDateDate
             )
 
             // Save/merge profile to Firestore

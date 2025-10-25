@@ -39,13 +39,12 @@ import com.devgarden.finper.ui.theme.DarkTextColor
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.LightGrayText
 import com.devgarden.finper.ui.theme.PrimaryGreen
-import kotlinx.coroutines.flow.collect
 
 @Composable
 fun RegisterScreen(
     onRegistered: () -> Unit,
     onLoginClick: () -> Unit,
-    viewModel: RegisterViewModel = viewModel()
+    vm: RegisterViewModel = viewModel()
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -58,11 +57,11 @@ fun RegisterScreen(
     var isConfirmPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
     val context = LocalContext.current
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by vm.uiState.collectAsState()
     LaunchedEffect(uiState) {
         if (uiState is RegisterUiState.Success) {
             onRegistered()
-            viewModel.resetState()
+            vm.resetState()
         }
     }
 
@@ -281,7 +280,7 @@ fun RegisterScreen(
                     // Botón Registrarse
                     Button(
                         onClick = {
-                            viewModel.register(
+                            vm.register(
                                 fullName = fullName,
                                 email = email,
                                 phone = phoneNumber,
