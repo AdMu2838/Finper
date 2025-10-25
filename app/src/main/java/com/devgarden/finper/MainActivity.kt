@@ -1,5 +1,6 @@
 package com.devgarden.finper
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -14,6 +15,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
@@ -24,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.features.launch.SplashScreen
 import com.devgarden.finper.ui.features.auth.AuthScreen
+import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,28 +35,39 @@ class MainActivity : ComponentActivity() {
         setContent {
             FinperTheme {
                 val context = LocalContext.current
+
+                // Estado para el splash
                 var showSplash by remember { mutableStateOf(true) }
 
+                // Leer SharedPreferences para saber si ya se mostró el onboarding
+                val prefs = context.getSharedPreferences("finper_prefs", Context.MODE_PRIVATE)
+                var showOnboarding by remember { mutableStateOf(!prefs.getBoolean("onboarding_shown", false)) }
+
                 if (showSplash) {
-                    // Mostrar el splash y cambiar el estado cuando termine el delay
                     SplashScreen(onTimeout = { showSplash = false })
                 } else {
-                    Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        // Mostrar pantalla de autenticación después del splash
-                        AuthScreen(
-                            onLoginClicked = {
-                                val intent = Intent(context, HomeActivity::class.java)
-                                context.startActivity(intent)
-                            },
-                            onRegisterClicked = {
-                                val intent = Intent(context, RegisterActivity::class.java)
-                                context.startActivity(intent)
-                            },
-                            onForgotPasswordClicked = {
-                                val intent = Intent(context, FormLoginActivity::class.java)
-                                context.startActivity(intent)
-                            }
-                        )
+                    if (showOnboarding) {
+                        OnboardingScreen(onFinish = {
+                            prefs.edit().putBoolean("onboarding_shown", true).apply()
+                            showOnboarding = false
+                        })
+                    } else {
+                        Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
+                            AuthScreen(
+                                onLoginClicked = {
+                                    val intent = Intent(context, HomeActivity::class.java)
+                                    context.startActivity(intent)
+                                },
+                                onRegisterClicked = {
+                                    val intent = Intent(context, RegisterActivity::class.java)
+                                    context.startActivity(intent)
+                                },
+                                onForgotPasswordClicked = {
+                                    val intent = Intent(context, FormLoginActivity::class.java)
+                                    context.startActivity(intent)
+                                }
+                            )
+                        }
                     }
                 }
             }
