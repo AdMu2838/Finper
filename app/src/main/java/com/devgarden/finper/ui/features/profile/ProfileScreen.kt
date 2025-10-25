@@ -21,10 +21,22 @@ import androidx.compose.ui.tooling.preview.Preview
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
+import com.devgarden.finper.ui.viewmodel.UserViewModel
+import com.devgarden.finper.data.UsuarioActual
 
 @Composable
-fun ProfileScreen(onBottomItemSelected: (Int) -> Unit = {}) {
+fun ProfileScreen(userViewModel: UserViewModel, onBottomItemSelected: (Int) -> Unit = {}, onLogout: () -> Unit = {}) {
+    val usuario = userViewModel.usuario
+    ProfileScreenContent(usuario = usuario, onBottomItemSelected = onBottomItemSelected, onLogout = {
+        userViewModel.cerrarSesion()
+        onLogout()
+    })
+}
+
+@Composable
+private fun ProfileScreenContent(usuario: UsuarioActual?, onBottomItemSelected: (Int) -> Unit = {}, onLogout: () -> Unit = {}) {
     var bottomSelected by remember { mutableIntStateOf(4) } // perfil seleccionado
+    val effectiveName = usuario?.fullName ?: usuario?.email?.substringBefore("@") ?: "Usuario"
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -102,7 +114,7 @@ fun ProfileScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                 .padding(top = 64.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = "John Smith", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15323B))
+                Text(text = effectiveName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15323B))
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "ID: 25030024", fontSize = 12.sp, color = Color.Gray)
 
@@ -118,7 +130,9 @@ fun ProfileScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileMenuItem(icon = Icons.Default.HelpOutline, label = "Ayuda")
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    ProfileMenuItem(icon = Icons.Default.ExitToApp, label = "Cerrar Sesión", tint = Color(0xFFD32F2F))
+                    ProfileMenuItem(icon = Icons.Default.ExitToApp, label = "Cerrar Sesión", tint = Color(0xFFD32F2F)) {
+                        onLogout()
+                    }
                 }
             }
         }
@@ -143,12 +157,12 @@ fun ProfileScreen(onBottomItemSelected: (Int) -> Unit = {}) {
 }
 
 @Composable
-private fun ProfileMenuItem(icon: ImageVector, label: String, tint: Color = Color(0xFF3E8BFF)) {
+private fun ProfileMenuItem(icon: ImageVector, label: String, tint: Color = Color(0xFF3E8BFF), onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .clickable { /* acción */ }
+            .clickable { onClick() }
             .padding(horizontal = 4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -173,6 +187,7 @@ private fun ProfileMenuItem(icon: ImageVector, label: String, tint: Color = Colo
 @Composable
 fun ProfileScreenPreview() {
     FinperTheme {
-        ProfileScreen()
+        // Preview con datos simulados
+        ProfileScreenContent(usuario = UsuarioActual(uid = "1", fullName = "Preview User", email = "preview@example.com"))
     }
 }

@@ -23,12 +23,20 @@ import com.devgarden.finper.ui.features.auth.login.LoginViewModel
 import com.devgarden.finper.ui.features.auth.login.LoginUiState
 import com.devgarden.finper.ui.features.home.HomeScreen
 import com.devgarden.finper.ui.features.profile.ProfileScreen
+import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 
 
 @Composable
 fun AppNavigation() {
+    // Compatibilidad con llamadas anteriores: crear el UserViewModel y delegar
+    val userViewModel: UserViewModel = viewModel()
+    AppNavigation(userViewModel)
+}
+
+@Composable
+fun AppNavigation(userViewModel: UserViewModel) {
     val context = LocalContext.current
     val navController = rememberNavController()
 
@@ -45,7 +53,7 @@ fun AppNavigation() {
     // Configuración de Google Sign-In
     val defaultWebClientId = try {
         context.getString(R.string.default_web_client_id)
-    } catch (e: Resources.NotFoundException) {
+    } catch (_: Resources.NotFoundException) {
         null
     }
 
@@ -64,8 +72,7 @@ fun AppNavigation() {
             val task = com.google.android.gms.auth.api.signin.GoogleSignIn.getSignedInAccountFromIntent(result.data)
             try {
                 val account = task.getResult(ApiException::class.java)
-                val idTokenAny = account?.idToken
-                val idTokenStr = idTokenAny as? String
+                val idTokenStr = account?.idToken
                 if (idTokenStr != null) {
                     // Pasamos el idToken al ViewModel para completar el sign-in en Firebase
                     loginViewModel.signInWithGoogle(idTokenStr)
@@ -165,7 +172,7 @@ fun AppNavigation() {
                     if (googleSignInClient != null) {
                         val signInIntent = try {
                             googleSignInClient::class.java.getMethod("getSignInIntent").invoke(googleSignInClient) as? android.content.Intent
-                        } catch (ex: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
                         if (signInIntent != null) {
@@ -174,7 +181,7 @@ fun AppNavigation() {
                             try {
                                 val directIntent = com.google.android.gms.auth.api.signin.GoogleSignIn.getClient(context, com.google.android.gms.auth.api.signin.GoogleSignInOptions.Builder(com.google.android.gms.auth.api.signin.GoogleSignInOptions.DEFAULT_SIGN_IN).build()).signInIntent
                                 googleSignInLauncher.launch(directIntent)
-                            } catch (ex: Exception) {
+                            } catch (_: Exception) {
                                 Toast.makeText(context, "No se pudo iniciar Google Sign-In. Revisa configuración y sincroniza Gradle.", Toast.LENGTH_LONG).show()
                             }
                         }
@@ -214,7 +221,7 @@ fun AppNavigation() {
                     if (googleSignInClient != null) {
                         val signInIntent = try {
                             googleSignInClient::class.java.getMethod("getSignInIntent").invoke(googleSignInClient) as? android.content.Intent
-                        } catch (ex: Exception) {
+                        } catch (_: Exception) {
                             null
                         }
                         if (signInIntent != null) {
@@ -243,11 +250,16 @@ fun AppNavigation() {
 
         // Pantalla Profile
         composable(Screen.Profile.route) {
-            ProfileScreen(onBottomItemSelected = { index ->
+            ProfileScreen(userViewModel, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     else -> Unit
+                }
+            }, onLogout = {
+                // Navegar a Auth y limpiar back stack de pantallas protegidas
+                navController.navigate(Screen.Auth.route) {
+                    popUpTo(Screen.Home.route) { inclusive = true }
                 }
             })
         }
