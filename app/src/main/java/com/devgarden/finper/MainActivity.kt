@@ -23,6 +23,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.features.launch.SplashScreen
+import com.devgarden.finper.ui.features.auth.AuthScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -38,18 +39,18 @@ class MainActivity : ComponentActivity() {
                     SplashScreen(onTimeout = { showSplash = false })
                 } else {
                     Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                        FinanceWelcomeScreen(
-                            modifier = Modifier.padding(innerPadding),
-                            onStart = {
+                        // Mostrar pantalla de autenticación después del splash
+                        AuthScreen(
+                            onLoginClicked = {
+                                val intent = Intent(context, HomeActivity::class.java)
+                                context.startActivity(intent)
+                            },
+                            onRegisterClicked = {
+                                val intent = Intent(context, RegisterActivity::class.java)
+                                context.startActivity(intent)
+                            },
+                            onForgotPasswordClicked = {
                                 val intent = Intent(context, FormLoginActivity::class.java)
-                                context.startActivity(intent)
-                            },
-                            onAnimateCircle = {
-                                val intent = Intent(context, CircleAnimationActivity::class.java)
-                                context.startActivity(intent)
-                            },
-                            onShowMovements = {
-                                val intent = Intent(context, DynamicListActivity::class.java)
                                 context.startActivity(intent)
                             }
                         )

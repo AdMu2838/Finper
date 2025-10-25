@@ -47,11 +47,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun SplashScreen(onTimeout: () -> Unit) {
 
-    // Animaciones: escala del logo y fade del texto
     val logoScale = remember { Animatable(0.6f) }
     val textAlpha = remember { Animatable(0f) }
 
-    // Anillo rotatorio con transición infinita (sutil)
     val infinite = rememberInfiniteTransition()
     val rotation by infinite.animateFloat(
         initialValue = 0f,
@@ -60,11 +58,9 @@ fun SplashScreen(onTimeout: () -> Unit) {
     )
 
     LaunchedEffect(Unit) {
-        // Ejecutar animaciones concurrentes y al final esperar el timeout total
         val scope = this
         scope.launch {
             logoScale.animateTo(targetValue = 1f, animationSpec = tween(durationMillis = 700))
-            // pequeño rebote
             logoScale.animateTo(targetValue = 0.95f, animationSpec = tween(durationMillis = 150))
             logoScale.animateTo(targetValue = 1f, animationSpec = tween(durationMillis = 150))
         }
@@ -72,8 +68,6 @@ fun SplashScreen(onTimeout: () -> Unit) {
             delay(250)
             textAlpha.animateTo(targetValue = 1f, animationSpec = tween(durationMillis = 700))
         }
-
-        // Mantener el splash un tiempo total (igual que antes)
         delay(2000L)
         onTimeout()
     }
@@ -132,11 +126,10 @@ fun SplashScreen(onTimeout: () -> Unit) {
     }
 }
 
-// --- Preview para ver tu diseño en Android Studio ---
 @Preview(showBackground = true)
 @Composable
 fun SplashScreenPreview() {
     FinperTheme {
-        SplashScreen(onTimeout = {}) // En el preview, no hace nada al terminar
+        SplashScreen(onTimeout = {})
     }
 }
