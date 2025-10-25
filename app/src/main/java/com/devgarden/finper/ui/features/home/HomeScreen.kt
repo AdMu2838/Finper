@@ -1,7 +1,6 @@
 package com.devgarden.finper.ui.features.home
 
 
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -10,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,10 +18,14 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devgarden.finper.ui.theme.FinperTheme
+import com.devgarden.finper.ui.theme.PrimaryGreen
+import com.devgarden.finper.ui.components.BottomBar
 
 
 // --- Data class to represent a transaction ---
@@ -43,7 +47,9 @@ val sampleTransactions = listOf(
 )
 
 @Composable
-fun HomeScreen() {
+fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
+    var bottomSelected by remember { mutableIntStateOf(0) }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -74,8 +80,22 @@ fun HomeScreen() {
             }
         }
 
-        // --- Bottom Navigation Bar ---
-        BottomNavBar(modifier = Modifier.align(Alignment.BottomCenter))
+        // --- Bottom Navigation Bar (reutilizable) ---
+        BottomBar(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            items = listOf(
+                Icons.Default.Home,
+                Icons.Default.BarChart,
+                Icons.Default.SwapHoriz,
+                Icons.Default.AccountBalanceWallet,
+                Icons.Default.Person
+            ),
+            selectedIndex = bottomSelected,
+            onItemSelected = {
+                bottomSelected = it
+                onBottomItemSelected(it)
+            }
+        )
     }
 }
 
@@ -85,7 +105,7 @@ fun HeaderSection() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 40.dp, bottomEnd = 40.dp))
-            .background(Color(0xFF00D1A1))
+            .background(PrimaryGreen)
             .padding(start = 24.dp, end = 24.dp, top = 48.dp, bottom = 32.dp),
     ) {
         // --- Greeting and Notification Bell ---
@@ -95,8 +115,8 @@ fun HeaderSection() {
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Column {
-                Text(text = "Hola", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                Text(text = "buenos días", fontSize = 16.sp, color = Color.White.copy(alpha = 0.8f))
+                Text(text = "Hola, Bienvenido de vuelta", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                Text(text = "Buenos días", fontSize = 16.sp, color = Color.White.copy(alpha = 0.8f))
             }
             IconButton(onClick = { /*TODO*/ }) {
                 Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
@@ -110,7 +130,7 @@ fun HeaderSection() {
             horizontalArrangement = Arrangement.SpaceAround
         ) {
             InfoCard("Presupuesto Total", "S/.7,783.00", Icons.Default.AccountBalanceWallet)
-            InfoCard("Gasto Del Mes", "-S/.1,187.40", Icons.Default.ReceiptLong, isExpense = true)
+            InfoCard("Gasto Del Mes", "-S/.1,187.40", Icons.Default.AccountBalanceWallet, isExpense = true)
         }
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -167,6 +187,7 @@ fun SavingsGoalsCard(modifier: Modifier = Modifier) {
             modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            // Columna de la izquierda (el auto)
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.padding(end = 16.dp)
@@ -178,18 +199,24 @@ fun SavingsGoalsCard(modifier: Modifier = Modifier) {
                     tint = Color(0xFF2D3748)
                 )
                 Text(
-                    text = "Guardando Para Tus Metas",
+                    text = "Guardando Para \nTus Metas",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF2D3748)
+                    color = Color(0xFF2D3748),
+                    textAlign = TextAlign.Center
                 )
             }
-            Divider(
+            //divider vertical
+            Spacer(
                 modifier = Modifier
-                    .height(60.dp)
+                    .height(120.dp)
                     .width(1.dp)
+                    .background(Color.Gray.copy(alpha = 0.3f))
             )
-            Column(modifier = Modifier.padding(start = 16.dp)) {
+            // Columna de la derecha (los items)
+            Column(
+                modifier = Modifier
+            ) {
                 GoalItem(icon = Icons.Default.AccountBalance, text = "Renueva el siguiente mes", amount = "S/.4,000.00")
                 Spacer(modifier = Modifier.height(8.dp))
                 GoalItem(icon = Icons.Default.Restaurant, text = "Comida semana pasada", amount = "-S/.100.00", isExpense = true)
@@ -200,25 +227,86 @@ fun SavingsGoalsCard(modifier: Modifier = Modifier) {
 
 @Composable
 fun GoalItem(icon: ImageVector, text: String, amount: String, isExpense: Boolean = false) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Icon(
-            imageVector = icon,
-            contentDescription = text,
-            modifier = Modifier.size(16.dp),
-            tint = Color.Gray
-        )
-        Spacer(modifier = Modifier.width(8.dp))
-        Text(text = text, fontSize = 12.sp, color = Color.Gray)
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = amount,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = if(isExpense) Color.Red.copy(alpha = 0.7f) else Color(0xFF2D3748)
-        )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // icono dentro de un círculo
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .clip(CircleShape)
+                .background(if (isExpense) Color(0xFFFFF6F6) else Color(0xFFEFFCF2)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = text,
+                modifier = Modifier.size(20.dp),
+                tint = if (isExpense) Color(0xFFD32F2F) else Color(0xFF007A4F)
+            )
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        // columna principal con título, subtítulo y progress
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+            Text(
+                text = text,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFF2D3748),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            LinearProgressIndicator(
+                progress = { if (isExpense) 0.18f else 0.6f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(6.dp)),
+                color = if (isExpense) Color(0xFFD32F2F) else Color(0xFF00B974),
+                trackColor = Color(0xFFF0F6F3)
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+            Text(
+                text = if (isExpense) "Gasto • Última semana" else "Ahorro • Progreso mensual",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        // columna de monto con ancho mínimo para evitar wrap vertical
+        Column(
+            modifier = Modifier
+                .widthIn(min = 92.dp)
+                .padding(start = 8.dp),
+            horizontalAlignment = Alignment.End
+        ) {
+            Text(
+                text = amount,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isExpense) Color(0xFFD32F2F) else Color(0xFF2D3748),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = if (isExpense) "18%" else "60%",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
-
 
 @Composable
 fun TimePeriodToggle(modifier: Modifier = Modifier) {
@@ -299,49 +387,6 @@ fun TransactionItem(transaction: Transaction) {
                 Text(text = transaction.category, color = Color.Gray, fontSize = 12.sp)
             }
         }
-    }
-}
-
-@Composable
-fun BottomNavBar(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(100.dp), // Increased height for the curve effect
-        shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.SpaceAround,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            BottomNavItem(icon = Icons.Default.Home, isSelected = true)
-            BottomNavItem(icon = Icons.Default.BarChart)
-            BottomNavItem(icon = Icons.Default.SwapHoriz)
-            BottomNavItem(icon = Icons.Default.AccountBalanceWallet)
-            BottomNavItem(icon = Icons.Default.Person)
-        }
-    }
-}
-
-@Composable
-fun BottomNavItem(icon: ImageVector, isSelected: Boolean = false) {
-    val backgroundColor = if (isSelected) Color(0xFFD9F3EC) else Color.Transparent
-    val iconColor = if (isSelected) Color(0xFF00D1A1) else Color.Gray
-
-    Box(
-        modifier = Modifier
-            .size(50.dp)
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .padding(12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(imageVector = icon, contentDescription = null, tint = iconColor)
     }
 }
 

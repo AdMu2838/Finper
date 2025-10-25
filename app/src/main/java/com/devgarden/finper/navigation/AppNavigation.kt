@@ -22,6 +22,7 @@ import com.devgarden.finper.ui.features.auth.forgot_password.ForgotPasswordUiSta
 import com.devgarden.finper.ui.features.auth.login.LoginViewModel
 import com.devgarden.finper.ui.features.auth.login.LoginUiState
 import com.devgarden.finper.ui.features.home.HomeScreen
+import com.devgarden.finper.ui.features.profile.ProfileScreen
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 
@@ -231,7 +232,24 @@ fun AppNavigation() {
 
         // Pantalla Home tras login
         composable(Screen.Home.route) {
-            HomeScreen()
+            HomeScreen(onBottomItemSelected = { index ->
+                when (index) {
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    else -> Unit
+                }
+            })
+        }
+
+        // Pantalla Profile
+        composable(Screen.Profile.route) {
+            ProfileScreen(onBottomItemSelected = { index ->
+                when (index) {
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    else -> Unit
+                }
+            })
         }
     }
 }
