@@ -13,15 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
-import androidx.core.content.edit
 import com.devgarden.finper.navigation.AppNavigation
-
 import com.devgarden.finper.ui.theme.FinperTheme
-import com.devgarden.finper.ui.features.launch.SplashScreen
-import com.devgarden.finper.ui.features.auth.AuthScreen
-import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
-import com.devgarden.finper.ui.features.auth.login.LoginScreen
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
