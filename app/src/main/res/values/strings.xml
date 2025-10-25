@@ -1,5 +1,5 @@
 <resources>
     <string name="app_name">Finper</string>
     <!-- Reemplaza este valor por el client ID de OAuth 2.0 (Web client) de tu proyecto Google/Firebase -->
-    <string name="default_web_client_id">REPLACE_WITH_YOUR_WEB_CLIENT_ID.apps.googleusercontent.com</string>
+    <string name="default_web_client_id">843058468254-8cnd87of0594u4eqm2esmq6h833k5k0p.apps.googleusercontent.com</string>
 </resources>
