@@ -116,6 +116,7 @@ fun OnboardingPageView(page: OnboardingPage) {
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
+            lineHeight = 36.sp,
             modifier = Modifier
                 .fillMaxHeight(0.4f)
                 .padding(top = 130.dp, start = 20.dp, end = 20.dp)
@@ -127,7 +128,6 @@ fun OnboardingPageView(page: OnboardingPage) {
                 .weight(1f),
             shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp),
             color = BackgroundWhite,
-            shadowElevation = 8.dp
         ) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Canvas(modifier = Modifier.fillMaxSize()) {
