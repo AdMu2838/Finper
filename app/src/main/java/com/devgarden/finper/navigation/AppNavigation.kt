@@ -10,7 +10,7 @@ import com.devgarden.finper.ui.features.launch.SplashScreen
 import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
 import com.devgarden.finper.ui.features.auth.create_account.RegisterScreen
 import androidx.compose.ui.platform.LocalContext
-
+import com.devgarden.finper.ui.features.auth.forgot_password.ForgotPasswordScreen
 
 
 @Composable
@@ -53,7 +53,7 @@ fun AppNavigation() {
             AuthScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
                 onRegisterClicked = { navController.navigate(Screen.Register.route) },
-                onForgotPasswordClicked = { /* navController.navigate(Screen.ForgotPassword.route) */ }
+                onForgotPasswordClicked = { navController.navigate(Screen.ForgotPassword.route)}
             )
         }
 
@@ -62,7 +62,7 @@ fun AppNavigation() {
             LoginScreen(
                 onLoginClick = { email, password -> /* Lógica de login */ },
                 onRegisterClick = { navController.navigate(Screen.Register.route)  },
-                onForgotPasswordClick = { /* navController.navigate(Screen.ForgotPassword.route) */ },
+                onForgotPasswordClick = { navController.navigate(Screen.ForgotPassword.route) },
                 onGoogleLoginClick = { /* Lógica de login con Google */ },
                 //onFacebookLoginClick = { /* Lógica de login con Facebook */ }
             )
@@ -81,6 +81,19 @@ fun AppNavigation() {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
                 }
+            )
+        }
+        // Pantalla 6: Forgot Password Screen
+        composable(Screen.ForgotPassword.route) {
+            ForgotPasswordScreen(
+                onNextClick = { email -> /* Lógica para siguiente paso de recuperación */ },
+                onLoginClick = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.ForgotPassword.route) { inclusive = true }
+                    }
+                },
+                onGoogleLoginClick = { /* Lógica de login con Google */ }
+                //onFacebookLoginClick = { /* Lógica de login con Facebook */ }
             )
         }
      }
