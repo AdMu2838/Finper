@@ -8,33 +8,43 @@ import com.devgarden.finper.ui.features.auth.AuthScreen
 import com.devgarden.finper.ui.features.auth.login.LoginScreen
 import com.devgarden.finper.ui.features.launch.SplashScreen
 import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
+import androidx.compose.ui.platform.LocalContext
+
 
 
 @Composable
 fun AppNavigation() {
-    val navController = rememberNavController()
+    val context = LocalContext.current
+     val navController = rememberNavController()
 
-    NavHost(
-        navController = navController,
-        startDestination = Screen.Splash.route
-    ) {
-        composable(Screen.Splash.route) {
+     NavHost(
+         navController = navController,
+         startDestination = Screen.Splash.route
+     ) {
+         composable(Screen.Splash.route) {
             SplashScreen(onTimeout = {
-                // Navega al onboarding y elimina el splash del historial
-                navController.navigate(Screen.Onboarding.route) {
-                    popUpTo(Screen.Splash.route) { inclusive = true }
-                }
-            })
-        }
+                // Decide si mostrar Onboarding solo la primera vez
+                val target = if (OnboardingPrefs.isOnboardingSeen(context)) {
+                     Screen.Auth.route
+                 } else {
+                     Screen.Onboarding.route
+                 }
+
+                 navController.navigate(target) {
+                     popUpTo(Screen.Splash.route) { inclusive = true }
+                 }
+             })
+         }
 
         // Pantalla 2: Onboarding
         composable(Screen.Onboarding.route) {
             OnboardingScreen(onFinish = {
-                // Navega a la pantalla de Auth y elimina el onboarding del historial
-                navController.navigate(Screen.Auth.route) {
-                    popUpTo(Screen.Onboarding.route) { inclusive = true }
-                }
-            })
+                // Marca que el onboarding ya se vio y navega a Auth
+                OnboardingPrefs.setOnboardingSeen(context)
+                 navController.navigate(Screen.Auth.route) {
+                     popUpTo(Screen.Onboarding.route) { inclusive = true }
+                 }
+             })
         }
 
         // Pantalla 3: Auth Screen (con botones de Ingresar/Registrar)
