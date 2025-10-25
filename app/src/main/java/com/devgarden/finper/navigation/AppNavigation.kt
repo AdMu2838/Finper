@@ -8,6 +8,7 @@ import com.devgarden.finper.ui.features.auth.AuthScreen
 import com.devgarden.finper.ui.features.auth.login.LoginScreen
 import com.devgarden.finper.ui.features.launch.SplashScreen
 import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
+import com.devgarden.finper.ui.features.auth.create_account.RegisterScreen
 import androidx.compose.ui.platform.LocalContext
 
 
@@ -51,7 +52,7 @@ fun AppNavigation() {
         composable(Screen.Auth.route) {
             AuthScreen(
                 onLoginClicked = { navController.navigate(Screen.Login.route) },
-                onRegisterClicked = { /* navController.navigate(Screen.Register.route) */ },
+                onRegisterClicked = { navController.navigate(Screen.Register.route) },
                 onForgotPasswordClicked = { /* navController.navigate(Screen.ForgotPassword.route) */ }
             )
         }
@@ -60,11 +61,27 @@ fun AppNavigation() {
         composable(Screen.Login.route) {
             LoginScreen(
                 onLoginClick = { email, password -> /* Lógica de login */ },
-                onRegisterClick = { /* navController.navigate(Screen.Register.route) */ },
+                onRegisterClick = { navController.navigate(Screen.Register.route)  },
                 onForgotPasswordClick = { /* navController.navigate(Screen.ForgotPassword.route) */ },
                 onGoogleLoginClick = { /* Lógica de login con Google */ },
                 //onFacebookLoginClick = { /* Lógica de login con Facebook */ }
             )
         }
-    }
-}
+
+        // Pantalla 5: Register Screen
+        composable(Screen.Register.route) {
+            RegisterScreen(
+                onRegisterClick = { fullName, email, phone, birthDate, password, confirmPassword ->
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                },
+                onLoginClick = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Register.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+     }
+ }
