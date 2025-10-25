@@ -23,12 +23,15 @@ import com.devgarden.finper.ui.features.auth.login.LoginViewModel
 import com.devgarden.finper.ui.features.auth.login.LoginUiState
 import com.devgarden.finper.ui.features.home.HomeScreen
 import com.google.android.gms.common.api.ApiException
+import com.google.firebase.auth.FirebaseAuth
 
 
 @Composable
 fun AppNavigation() {
     val context = LocalContext.current
     val navController = rememberNavController()
+
+    val firebaseAuth = FirebaseAuth.getInstance()
 
     // ViewModel para Login (usado por el flujo de Google Sign-In)
     val loginViewModel: LoginViewModel = viewModel()
@@ -80,7 +83,8 @@ fun AppNavigation() {
             is LoginUiState.Success -> {
                 // Navegar a Home y limpiar back stack de pantallas de autenticación
                 navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.Splash.route) { inclusive = true }
+                    popUpTo(Screen.Auth.route) { inclusive = true }
+                    launchSingleTop = true
                 }
             }
             is LoginUiState.Error -> {
@@ -118,10 +122,11 @@ fun AppNavigation() {
     ) {
         composable(Screen.Splash.route) {
             SplashScreen(onTimeout = {
-                val target = if (OnboardingPrefs.isOnboardingSeen(context)) {
-                    Screen.Auth.route
-                } else {
-                    Screen.Onboarding.route
+                // Si ya hay sesión de Firebase, ir directamente a Home
+                val target = when {
+                    firebaseAuth.currentUser != null -> Screen.Home.route
+                    OnboardingPrefs.isOnboardingSeen(context) -> Screen.Auth.route
+                    else -> Screen.Onboarding.route
                 }
 
                 navController.navigate(target) {
