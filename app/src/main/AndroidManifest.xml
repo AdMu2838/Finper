@@ -11,19 +11,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Finper">
-        <activity
-            android:name=".RegisterActivity"
-            android:exported="false" />
-        <activity
-            android:name=".FormLoginActivity"
-            android:exported="false" />
-        <activity
-            android:name=".CircleAnimationActivity"
-            android:exported="false" />
-        <activity android:name=".HomeActivity"
-            android:exported="false" />
-        <activity android:name=".ExpenseBarActivity"
-            android:exported="false" />
+
         <activity android:name=".DynamicListActivity" android:exported="false" />
         <activity
             android:name=".MainActivity"
