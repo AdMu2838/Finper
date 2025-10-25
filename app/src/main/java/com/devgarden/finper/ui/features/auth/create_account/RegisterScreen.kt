@@ -8,6 +8,9 @@ import java.text.SimpleDateFormat
 import java.util.Locale
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -36,13 +39,13 @@ import com.devgarden.finper.ui.theme.DarkTextColor
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.LightGrayText
 import com.devgarden.finper.ui.theme.PrimaryGreen
-
-
+import kotlinx.coroutines.flow.collect
 
 @Composable
 fun RegisterScreen(
-    onRegisterClick: (String, String, String, String, String, String) -> Unit,
-    onLoginClick: () -> Unit
+    onRegistered: () -> Unit,
+    onLoginClick: () -> Unit,
+    viewModel: RegisterViewModel = viewModel()
 ) {
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
@@ -55,6 +58,13 @@ fun RegisterScreen(
     var isConfirmPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
     val context = LocalContext.current
+    val uiState by viewModel.uiState.collectAsState()
+    LaunchedEffect(uiState) {
+        if (uiState is RegisterUiState.Success) {
+            onRegistered()
+            viewModel.resetState()
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -271,22 +281,32 @@ fun RegisterScreen(
                     // Botón Registrarse
                     Button(
                         onClick = {
-                            onRegisterClick(
-                                fullName,
-                                email,
-                                phoneNumber,
-                                birthDate.text,
-                                password,
-                                confirmPassword
+                            viewModel.register(
+                                fullName = fullName,
+                                email = email,
+                                phone = phoneNumber,
+                                birthDate = birthDate.text,
+                                password = password,
+                                confirmPassword = confirmPassword
                             )
                         },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                        enabled = uiState !is RegisterUiState.Loading
                     ) {
-                        Text("Registrarse", fontSize = 18.sp, color = Color.White)
+                        if (uiState is RegisterUiState.Loading) {
+                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White, strokeWidth = 2.dp)
+                        } else {
+                            Text("Registrarse", fontSize = 18.sp, color = Color.White)
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    if (uiState is RegisterUiState.Error) {
+                        val msg = (uiState as RegisterUiState.Error).message
+                        Text(text = msg, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(top = 4.dp))
                     }
                     Spacer(modifier = Modifier.height(16.dp))
 
@@ -343,6 +363,6 @@ private fun outlinedTextFieldColors() = OutlinedTextFieldDefaults.colors(
 @Composable
 fun RegisterScreenPreview() {
     FinperTheme {
-        RegisterScreen(onRegisterClick = { _, _, _, _, _, _ -> }, onLoginClick = {})
+        RegisterScreen(onRegistered = {}, onLoginClick = {})
     }
 }

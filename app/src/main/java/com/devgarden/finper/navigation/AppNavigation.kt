@@ -71,7 +71,7 @@ fun AppNavigation() {
         // Pantalla 5: Register Screen
         composable(Screen.Register.route) {
             RegisterScreen(
-                onRegisterClick = { fullName, email, phone, birthDate, password, confirmPassword ->
+                onRegistered = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Register.route) { inclusive = true }
                     }
