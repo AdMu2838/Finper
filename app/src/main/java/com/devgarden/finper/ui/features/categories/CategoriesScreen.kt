@@ -25,15 +25,23 @@ import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.TopRoundedHeader
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.viewmodel.UserViewModel
-import java.text.DecimalFormat
-import java.text.DecimalFormatSymbols
+import com.devgarden.finper.utils.FormatUtils
+import com.devgarden.finper.utils.Constants
 
+/**
+ * Modelo de datos para categorías.
+ */
 data class Category(val icon: ImageVector, val label: String)
 
+/**
+ * Pantalla de categorías que muestra todas las categorías disponibles en un grid.
+ *
+ * @param onBack Callback para retroceder
+ * @param onBottomItemSelected Callback para navegación de barra inferior
+ */
 @Composable
 fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Unit = {}) {
-    var bottomSelected by remember { mutableStateOf(3) }
-    // estado para la categoria seleccionada: si no es null, mostramos la pantalla de transacciones de la categoria
+    var bottomSelected by remember { mutableStateOf(Constants.Navigation.BOTTOM_NAV_CATEGORIES) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     val categories = listOf(
@@ -48,14 +56,14 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
         Category(Icons.Default.Add, "Otros")
     )
 
-    // Obtener balance desde ViewModel
     val userViewModel: UserViewModel = viewModel()
-    val balanceStr = formatCurrency(userViewModel.balance)
+    val balanceStr = FormatUtils.formatCurrency(userViewModel.balance)
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(Color(0xFFF0F4F7))) {
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFFF0F4F7))
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header (reusable)
             TopRoundedHeader(title = "Categorias", showBack = true, onBack = onBack)
@@ -75,18 +83,23 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Grid of categories (3 columns)
-            Column(modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp)) {
+            // Grid de categorías (3 columnas)
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
                 val rows = categories.chunked(3)
                 rows.forEach { row ->
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
                         row.forEach { cat ->
                             // pasar onClick para abrir la pantalla de transacciones filtradas por categoria
                             CategoryItem(cat) { selectedCategory = cat.label }
                         }
-                        // If row has less than 3 items, add spacers
+                        // Agregar espaciadores si la fila tiene menos de 3 items
                         if (row.size < 3) {
                             repeat(3 - row.size) {
                                 Spacer(modifier = Modifier.weight(1f))
@@ -117,14 +130,13 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
         )
     }
 
-    // Si se seleccionó una categoría, mostrar la pantalla de transacciones para esa categoría (pantalla completa)
+    // Mostrar pantalla de transacciones filtradas por categoría si se selecciona una
     if (selectedCategory != null) {
         CategoryTransactionsScreen(
             category = selectedCategory!!,
             onBack = { selectedCategory = null },
             selectedIndex = bottomSelected,
             onBottomItemSelected = { idx ->
-                // propagar la selección al padre / AppNavigation
                 bottomSelected = idx
                 onBottomItemSelected(idx)
             }
@@ -132,14 +144,20 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
     }
 }
 
+/**
+ * Item individual de categoría en el grid.
+ *
+ * @param category Categoría a mostrar
+ * @param onClick Callback al hacer clic
+ */
 @Composable
 fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
-    Column(modifier = Modifier
-
-        .padding(6.dp)
-        .clickable { onClick() }
-        , horizontalAlignment = Alignment.CenterHorizontally) {
-
+    Column(
+        modifier = Modifier
+            .padding(6.dp)
+            .clickable { onClick() },
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
         Card(
             modifier = Modifier
                 .size(72.dp)
@@ -148,12 +166,16 @@ fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
-                Icon(category.icon, contentDescription = category.label, tint = Color(0xFF007A4F), modifier = Modifier.size(32.dp))
+                Icon(
+                    category.icon,
+                    contentDescription = category.label,
+                    tint = Color(0xFF007A4F),
+                    modifier = Modifier.size(32.dp)
+                )
             }
         }
-
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = category.label, fontSize = 12.sp)
+        Text(text = category.label, fontSize = 12.sp, color = Color(0xFF15323B))
     }
 }
 
@@ -162,14 +184,4 @@ fun CategoriesScreenPreview() {
     FinperTheme {
         CategoriesScreen()
     }
-}
-
-// Helper local para formatear moneda con separador de miles
-private fun formatCurrency(amount: Double): String {
-    val symbols = DecimalFormatSymbols().apply {
-        groupingSeparator = ','
-        decimalSeparator = '.'
-    }
-    val df = DecimalFormat("#,##0.00", symbols)
-    return "S/.${df.format(amount)}"
 }
