@@ -242,7 +242,7 @@ fun HeaderSection() {
             expenseLabel = "Gasto Del Mes",
             expenseValue = expenseStr,
             //progress = 0.3f,
-            progressLabel = ""
+            progressLabel = "30% De Tus Gastos, Se Ve Bien."
         )
     }
 }

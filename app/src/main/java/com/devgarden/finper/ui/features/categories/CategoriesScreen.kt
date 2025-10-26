@@ -24,7 +24,6 @@ import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.TopRoundedHeader
 import com.devgarden.finper.ui.theme.FinperTheme
-import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
@@ -34,6 +33,8 @@ data class Category(val icon: ImageVector, val label: String)
 @Composable
 fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Unit = {}) {
     var bottomSelected by remember { mutableStateOf(3) }
+    // estado para la categoria seleccionada: si no es null, mostramos la pantalla de transacciones de la categoria
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
 
     val categories = listOf(
         Category(Icons.Default.Restaurant, "Comida"),
@@ -69,7 +70,7 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
                 expenseLabel = "Total Expense",
                 expenseValue = "-S/.1,187.40",
                 //progress = 0.3f,
-                progressLabel = "30% of Your Expenses, Looks Good."
+                progressLabel = ""
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -82,7 +83,8 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
                 rows.forEach { row ->
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         row.forEach { cat ->
-                            CategoryItem(cat)
+                            // pasar onClick para abrir la pantalla de transacciones filtradas por categoria
+                            CategoryItem(cat) { selectedCategory = cat.label }
                         }
                         // If row has less than 3 items, add spacers
                         if (row.size < 3) {
@@ -114,14 +116,19 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
             }
         )
     }
+
+    // Si se seleccionó una categoría, mostrar la pantalla de transacciones para esa categoría (pantalla completa)
+    if (selectedCategory != null) {
+        CategoryTransactionsScreen(category = selectedCategory!!, onBack = { selectedCategory = null })
+    }
 }
 
 @Composable
-fun CategoryItem(category: Category) {
+fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
     Column(modifier = Modifier
 
         .padding(6.dp)
-        .clickable { /* navegar a categoria */ }
+        .clickable { onClick() }
         , horizontalAlignment = Alignment.CenterHorizontally) {
 
         Card(

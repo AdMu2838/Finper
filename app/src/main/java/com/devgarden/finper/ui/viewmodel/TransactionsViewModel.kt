@@ -51,6 +51,134 @@ class TransactionsViewModel : ViewModel() {
     var monthlyError by mutableStateOf<String?>(null)
         private set
 
+    // --- Estados y métodos para consulta por categoría (server-side ordering) ---
+    var categoryTransactions by mutableStateOf<List<TransactionDto>>(emptyList())
+        private set
+
+    var categoryLoading by mutableStateOf(false)
+        private set
+
+    var categoryError by mutableStateOf<String?>(null)
+        private set
+
+    // Si Firestore devuelve el error de índice, la URL suele estar en el mensaje; la guardamos para que la UI la muestre
+    var categoryIndexUrl by mutableStateOf<String?>(null)
+        private set
+
+    /**
+     * Carga (una vez) las transacciones que tienen exactamente la categoría dada.
+     * Intenta ordenar en el servidor por `date` DESC; si Firestore exige un índice, captura la URL y la expone en `categoryIndexUrl`.
+     */
+    fun loadTransactionsByCategory(category: String) {
+        val user = auth.currentUser
+        if (user == null) {
+            categoryTransactions = emptyList()
+            categoryLoading = false
+            categoryError = "Usuario no autenticado"
+            categoryIndexUrl = null
+            return
+        }
+
+        categoryLoading = true
+        categoryError = null
+        categoryIndexUrl = null
+
+        try {
+            db.collection("users").document(user.uid).collection("transactions")
+                .whereEqualTo("category", category)
+                .orderBy("date", Query.Direction.DESCENDING)
+                .get()
+                .addOnSuccessListener { snapshot ->
+                    val list = snapshot.documents.mapNotNull { doc ->
+                        try {
+                            val id = doc.id
+                            val rawAmount = doc.get("amount")
+                            val amount = when (rawAmount) {
+                                is Number -> rawAmount.toDouble()
+                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
+                                else -> 0.0
+                            }
+                            val categoryField = doc.getString("category") ?: ""
+                            val timestamp = doc.get("date")
+                            val date: Date? = when (timestamp) {
+                                is Timestamp -> timestamp.toDate()
+                                is Date -> timestamp
+                                else -> null
+                            }
+                            val description = doc.getString("description") ?: ""
+                            val isExpense = doc.getBoolean("isExpense") ?: false
+
+                            TransactionDto(id = id, amount = amount, category = categoryField, date = date, description = description, isExpense = isExpense)
+                        } catch (_: Exception) {
+                            null
+                        }
+                    }
+                    categoryTransactions = list
+                    categoryLoading = false
+                }
+                .addOnFailureListener { ex ->
+                    categoryLoading = false
+                    categoryError = ex.localizedMessage
+                    // intentar extraer URL de índice si existe
+                    val msg = ex.localizedMessage ?: ""
+                    val regex = """https?://console.firebase.google.com[^"]+""".toRegex()
+                    val match = regex.find(msg)
+                    categoryIndexUrl = match?.value
+
+                    // Si la falla parece ser por índice, hacemos un fallback: consultar sin orderBy y ordenar localmente
+                    val idxRequired = msg.contains("requires an index") || categoryIndexUrl != null
+                    if (idxRequired) {
+                        // consultar sin orderBy
+                        db.collection("users").document(user.uid).collection("transactions")
+                            .whereEqualTo("category", category)
+                            .get()
+                            .addOnSuccessListener { snap2 ->
+                                val fallback = snap2.documents.mapNotNull { doc ->
+                                    try {
+                                        val id = doc.id
+                                        val rawAmount = doc.get("amount")
+                                        val amount = when (rawAmount) {
+                                            is Number -> rawAmount.toDouble()
+                                            is String -> rawAmount.toDoubleOrNull() ?: 0.0
+                                            else -> 0.0
+                                        }
+                                        val categoryField = doc.getString("category") ?: ""
+                                        val timestamp = doc.get("date")
+                                        val date: Date? = when (timestamp) {
+                                            is Timestamp -> timestamp.toDate()
+                                            is Date -> timestamp
+                                            else -> null
+                                        }
+                                        val description = doc.getString("description") ?: ""
+                                        val isExpense = doc.getBoolean("isExpense") ?: false
+                                        TransactionDto(id = id, amount = amount, category = categoryField, date = date, description = description, isExpense = isExpense)
+                                    } catch (_: Exception) {
+                                        null
+                                    }
+                                }.sortedWith(compareByDescending<TransactionDto> { it.date ?: Date(0) })
+
+                                categoryTransactions = fallback
+                                // no cambiar categoryIndexUrl ni categoryError (mostramos link), categoryLoading ya false
+                            }
+                            .addOnFailureListener {
+                                // ignorar: ya tenemos categoryError
+                            }
+                    }
+                }
+        } catch (ex: Exception) {
+            categoryLoading = false
+            categoryError = ex.localizedMessage
+            categoryIndexUrl = null
+        }
+    }
+
+    fun clearCategoryQuery() {
+        categoryTransactions = emptyList()
+        categoryLoading = false
+        categoryError = null
+        categoryIndexUrl = null
+    }
+
     init {
         // por defecto cargar todas las transacciones (sin rango)
         listenTransactionsRange(null, null)
