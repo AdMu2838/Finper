@@ -44,7 +44,7 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
         Category(Icons.Default.CardGiftcard, "Regalos"),
         Category(Icons.Default.Savings, "Ahorros"),
         Category(Icons.Default.Movie, "Entretenimiento"),
-        Category(Icons.Default.Add, "Mas")
+        Category(Icons.Default.Add, "Otros")
     )
 
     // Obtener balance desde ViewModel

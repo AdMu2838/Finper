@@ -117,6 +117,17 @@ fun TransactionsScreen(
 ) {
     var selectedFilter by remember { mutableStateOf(initialFilter) }
 
+    // Lista mutable en memoria para que los nuevos items se muestren inmediatamente
+    val transactions = remember { mutableStateListOf<TransactionModel>().apply { addAll(sampleTransactions) } }
+
+    // Estados para el diálogo de creación
+    var showDialog by remember { mutableStateOf(false) }
+    var isExpenseDialog by remember { mutableStateOf(true) }
+    var newTitle by remember { mutableStateOf("") }
+    var newAmount by remember { mutableStateOf("") }
+    var newCategory by remember { mutableStateOf("") }
+    var newDate by remember { mutableStateOf("") }
+
     // Obtener balance desde ViewModel
     val userViewModel: UserViewModel = viewModel()
     val balance = userViewModel.balance
@@ -174,13 +185,44 @@ fun TransactionsScreen(
 
                 // filtro reutilizable
                 TransactionFilterToggle(selected = selectedFilter, onSelected = { selectedFilter = it })
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Botones para agregar Ingreso / Gasto
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Button(onClick = {
+                        isExpenseDialog = false
+                        newTitle = ""
+                        newAmount = ""
+                        newCategory = ""
+                        newDate = ""
+                        showDialog = true
+                    }, modifier = Modifier.weight(1f)) {
+                        Icon(Icons.Default.Add, contentDescription = "Agregar Ingreso")
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Agregar ingreso")
+                    }
+
+                    Button(onClick = {
+                        isExpenseDialog = true
+                        newTitle = ""
+                        newAmount = ""
+                        newCategory = ""
+                        newDate = ""
+                        showDialog = true
+                    }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFF6F6))) {
+                        Icon(Icons.Default.Remove, contentDescription = "Agregar Gasto", tint = Color(0xFFD32F2F))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Agregar gasto", color = Color(0xFFD32F2F))
+                    }
+                }
             }
 
             // list
             val filtered = when (selectedFilter) {
-                TransactionFilter.ALL -> sampleTransactions
-                TransactionFilter.INCOME -> sampleTransactions.filter { !it.isExpense }
-                TransactionFilter.EXPENSE -> sampleTransactions.filter { it.isExpense }
+                TransactionFilter.ALL -> transactions
+                TransactionFilter.INCOME -> transactions.filter { !it.isExpense }
+                TransactionFilter.EXPENSE -> transactions.filter { it.isExpense }
             }
 
             TransactionList(modifier = Modifier
@@ -201,6 +243,48 @@ fun TransactionsScreen(
             selectedIndex = selectedTabIndex,
             onItemSelected = onBottomItemSelected
         )
+
+        // Dialogo para crear transacción
+        if (showDialog) {
+            AlertDialog(
+                onDismissRequest = { showDialog = false },
+                title = { Text(if (isExpenseDialog) "Agregar Gasto" else "Agregar Ingreso") },
+                text = {
+                    Column {
+                        OutlinedTextField(value = newTitle, onValueChange = { newTitle = it }, label = { Text("Título") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = newAmount, onValueChange = { newAmount = it }, label = { Text("Monto (ej: 1200.50)") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = newCategory, onValueChange = { newCategory = it }, label = { Text("Categoría") })
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(value = newDate, onValueChange = { newDate = it }, label = { Text("Fecha (ej: Abril 30)") })
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        // Crear nuevo item y añadir a la lista
+                        val amountDouble = newAmount.toDoubleOrNull() ?: 0.0
+                        val formatted = if (isExpenseDialog) "-S/.${formatNumber(amountDouble)}" else "S/.${formatNumber(amountDouble)}"
+                        val icon = if (isExpenseDialog) Icons.Default.ShoppingBasket else Icons.Default.Payments
+                        val id = System.currentTimeMillis().toString()
+                        val title = if (newTitle.isBlank()) (if (isExpenseDialog) "Gasto" else "Ingreso") else newTitle
+                        val category = if (newCategory.isBlank()) "Varios" else newCategory
+                        val date = if (newDate.isBlank()) "Hoy" else newDate
+
+                        transactions.add(0, TransactionModel(id = id, icon = icon, title = title, time = "--:--", date = date, category = category, amount = formatted, isExpense = isExpenseDialog))
+
+                        showDialog = false
+                    }) {
+                        Text("Guardar")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDialog = false }) {
+                        Text("Cancelar")
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -212,6 +296,15 @@ private fun formatCurrency(amount: Double): String {
     }
     val df = DecimalFormat("#,##0.00", symbols)
     return "S/.${df.format(amount)}"
+}
+
+private fun formatNumber(amount: Double): String {
+    val symbols = DecimalFormatSymbols().apply {
+        groupingSeparator = ','
+        decimalSeparator = '.'
+    }
+    val df = DecimalFormat("#,##0.00", symbols)
+    return df.format(amount)
 }
 
 @Preview(showBackground = true)
