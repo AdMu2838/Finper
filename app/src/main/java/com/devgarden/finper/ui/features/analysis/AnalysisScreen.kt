@@ -42,8 +42,11 @@ fun AnalysisScreen(
     val userViewModel: UserViewModel = viewModel()
     val transactionsViewModel: TransactionsViewModel = viewModel()
 
-    // Period selector: 0=Diario,1=Semanal,2=Mensual(Ene-Jun),3=Mensual(Jul-Dic),4=Anual
-    var selectedPeriod by remember { mutableStateOf(2) } // por defecto Mensual (Ene-Jun)
+    // Period selector: 0=Diario,1=Semanal,2=Mensual,3=Anual
+    var selectedPeriod by remember { mutableStateOf(0) } // por defecto Diario
+
+    // Para el período mensual, controlar qué semestre mostrar (0=Ene-Jun, 1=Jul-Dic)
+    var monthSemester by remember { mutableStateOf(0) }
 
     // DebouncedSelected usado para aplicar la lógica (evita cambiar listeners muy rápido)
     var debouncedSelected by remember { mutableStateOf(selectedPeriod) }
@@ -61,9 +64,9 @@ fun AnalysisScreen(
         val range = when (debouncedSelected) {
             0 -> periodDayRange(now)
             1 -> periodMonthRange(now)
-            2, 3 -> periodYearRange(now) // Para ambos grupos de meses, cargar todo el año
-            4 -> periodMultiYearRange(now)
-            else -> periodMonthRange(now)
+            2 -> periodYearRange(now) // Mensual carga todo el año
+            3 -> periodMultiYearRange(now)
+            else -> periodDayRange(now)
         }
         transactionsViewModel.listenTransactionsRange(range.first, range.second)
     }
@@ -75,8 +78,8 @@ fun AnalysisScreen(
     val monthlyExpenses = transactionsViewModel.monthlyExpenses
 
     // Calcular sums según rango para mostrar en el chart
-    val groupedData by remember(transactions, debouncedSelected) {
-        derivedStateOf { groupTransactionsForPeriod(transactions, debouncedSelected) }
+    val groupedData by remember(transactions, debouncedSelected, monthSemester) {
+        derivedStateOf { groupTransactionsForPeriod(transactions, debouncedSelected, monthSemester) }
     }
 
     val balance = userViewModel.balance
@@ -140,6 +143,38 @@ fun AnalysisScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    // Si es mensual, mostrar selector de semestre
+                    if (selectedPeriod == 2) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Button(
+                                onClick = { monthSemester = 0 },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (monthSemester == 0) Color(0xFF00D1A1) else Color(0xFFE0E0E0),
+                                    contentColor = if (monthSemester == 0) Color.White else Color.Gray
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Ene - Jun")
+                            }
+                            Button(
+                                onClick = { monthSemester = 1 },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (monthSemester == 1) Color(0xFF00D1A1) else Color(0xFFE0E0E0),
+                                    contentColor = if (monthSemester == 1) Color.White else Color.Gray
+                                ),
+                                shape = RoundedCornerShape(12.dp)
+                            ) {
+                                Text("Jul - Dic")
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
+
                     // Gráfico de barras con los datos agrupados
                     BarChart(data = groupedData)
 
@@ -197,7 +232,7 @@ private fun BarChart(data: List<Pair<String, Double>>, modifier: Modifier = Modi
 
 @Composable
 private fun PeriodToggle(selected: Int, onSelected: (Int) -> Unit) {
-    val periods = listOf("Diario", "Semanal", "Ene-Jun", "Jul-Dic", "Anual")
+    val periods = listOf("Diario", "Semanal", "Mensual", "Anual")
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -219,7 +254,7 @@ private fun PeriodToggle(selected: Int, onSelected: (Int) -> Unit) {
                     elevation = ButtonDefaults.buttonElevation(0.dp),
                     contentPadding = PaddingValues(horizontal = 4.dp)
                 ) {
-                    Text(text = label, fontSize = 11.sp)
+                    Text(text = label, fontSize = 12.sp)
                 }
             }
         }
@@ -228,20 +263,42 @@ private fun PeriodToggle(selected: Int, onSelected: (Int) -> Unit) {
 
 // Agrupa las transacciones según el periodo y devuelve lista de pares (label, value).
 // value será negativo para gastos, positivo para ingresos.
-private fun groupTransactionsForPeriod(transactions: List<TransactionsViewModel.TransactionDto>, period: Int): List<Pair<String, Double>> {
+private fun groupTransactionsForPeriod(
+    transactions: List<TransactionsViewModel.TransactionDto>,
+    period: Int,
+    monthSemester: Int = 0
+): List<Pair<String, Double>> {
     when (period) {
-        0 -> { // Diario -> últimos 7 días (L..D)
+        0 -> { // Diario -> días de la semana actual (L a D)
             val labels = mutableListOf<String>()
             val sums = mutableListOf<Double>()
             val cal = Calendar.getInstance()
-            // empezar 6 días atrás hasta hoy
-            cal.add(Calendar.DAY_OF_YEAR, -6)
+
+            // Establecer al lunes de la semana actual
+            cal.firstDayOfWeek = Calendar.MONDAY
+            cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+
+            // Iterar por los 7 días de la semana (Lunes a Domingo)
             repeat(7) {
                 val dayStart = cal.time
                 val dayEndCal = cal.clone() as Calendar
-                dayEndCal.set(Calendar.HOUR_OF_DAY, 23); dayEndCal.set(Calendar.MINUTE, 59); dayEndCal.set(Calendar.SECOND, 59); dayEndCal.set(Calendar.MILLISECOND, 999)
+                dayEndCal.set(Calendar.HOUR_OF_DAY, 23)
+                dayEndCal.set(Calendar.MINUTE, 59)
+                dayEndCal.set(Calendar.SECOND, 59)
+                dayEndCal.set(Calendar.MILLISECOND, 999)
                 val dayEnd = dayEndCal.time
-                val sum = transactions.filter { it.date != null && it.date in dayStart..dayEnd }.sumOf { it.amount * if (it.isExpense) -1 else 1 }
+
+                // Sumar transacciones de este día
+                val sum = transactions.filter { tx ->
+                    tx.date != null && tx.date >= dayStart && tx.date <= dayEnd
+                }.sumOf { tx ->
+                    tx.amount * if (tx.isExpense) -1 else 1
+                }
+
                 labels.add(shortDayLabel(cal.get(Calendar.DAY_OF_WEEK)))
                 sums.add(sum)
                 cal.add(Calendar.DAY_OF_YEAR, 1)
@@ -286,43 +343,30 @@ private fun groupTransactionsForPeriod(transactions: List<TransactionsViewModel.
 
             return labels.zip(sums)
         }
-        2 -> { // Mensual (Enero - Junio) -> primeros 6 meses del año actual
-            val labels = (0..5).map { monthShortLabel(it) }
+        2 -> { // Mensual -> mostrar 6 meses según el semestre seleccionado
+            val startMonth = if (monthSemester == 0) 0 else 6
+            val endMonth = if (monthSemester == 0) 5 else 11
+
+            val labels = (startMonth..endMonth).map { monthShortLabel(it) }
             val sums = MutableList(6) { 0.0 }
             val cal = Calendar.getInstance()
             val year = cal.get(Calendar.YEAR)
+
             transactions.forEach { tx ->
                 val d = tx.date ?: return@forEach
                 val c = Calendar.getInstance()
                 c.time = d
                 if (c.get(Calendar.YEAR) == year) {
                     val m = c.get(Calendar.MONTH)
-                    if (m in 0..5) {
-                        sums[m] = sums[m] + tx.amount * if (tx.isExpense) -1 else 1
+                    if (m in startMonth..endMonth) {
+                        val index = m - startMonth
+                        sums[index] = sums[index] + tx.amount * if (tx.isExpense) -1 else 1
                     }
                 }
             }
             return labels.zip(sums)
         }
-        3 -> { // Mensual (Julio - Diciembre) -> últimos 6 meses del año actual
-            val labels = (6..11).map { monthShortLabel(it) }
-            val sums = MutableList(6) { 0.0 }
-            val cal = Calendar.getInstance()
-            val year = cal.get(Calendar.YEAR)
-            transactions.forEach { tx ->
-                val d = tx.date ?: return@forEach
-                val c = Calendar.getInstance()
-                c.time = d
-                if (c.get(Calendar.YEAR) == year) {
-                    val m = c.get(Calendar.MONTH)
-                    if (m in 6..11) {
-                        sums[m - 6] = sums[m - 6] + tx.amount * if (tx.isExpense) -1 else 1
-                    }
-                }
-            }
-            return labels.zip(sums)
-        }
-        4 -> { // Anual -> últimos 5 años
+        3 -> { // Anual -> últimos 5 años
             val labels = mutableListOf<String>()
             val sums = mutableListOf<Double>()
             val cal = Calendar.getInstance()
@@ -374,16 +418,24 @@ private fun monthShortLabel(monthIndex: Int): String = when (monthIndex) {
 private fun periodDayRange(now: Date): Pair<Date, Date> {
     val cal = Calendar.getInstance()
     cal.time = now
+
+    // Establecer al lunes de la semana actual
+    cal.firstDayOfWeek = Calendar.MONDAY
+    cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
     cal.set(Calendar.HOUR_OF_DAY, 0)
     cal.set(Calendar.MINUTE, 0)
     cal.set(Calendar.SECOND, 0)
     cal.set(Calendar.MILLISECOND, 0)
     val start = cal.time
+
+    // Establecer al domingo de la semana actual
+    cal.set(Calendar.DAY_OF_WEEK, Calendar.SUNDAY)
     cal.set(Calendar.HOUR_OF_DAY, 23)
     cal.set(Calendar.MINUTE, 59)
     cal.set(Calendar.SECOND, 59)
     cal.set(Calendar.MILLISECOND, 999)
     val end = cal.time
+
     return Pair(start, end)
 }
 

@@ -85,9 +85,9 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
             // Summary card (reusable) - ahora usando balance desde Firestore
             SummaryCard(
                 modifier = Modifier.padding(horizontal = 16.dp),
-                balanceLabel = "Total Balance",
+                balanceLabel = "Balance Total",
                 balanceValue = balanceStr,
-                expenseLabel = "Total Expense",
+                expenseLabel = "Gasto del mes",
                 expenseValue = expenseStr,
                 //progress = 0.3f,
                 progressLabel = ""
