@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
+import com.google.firebase.firestore.Query
 import java.util.*
 
 /**
@@ -55,9 +56,11 @@ class TransactionsViewModel : ViewModel() {
         error = null
 
         listener?.remove()
+        // Ordenar por fecha descendente para mostrar las transacciones más recientes primero
         listener = db.collection("users")
             .document(user.uid)
             .collection("transactions")
+            .orderBy("date", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, ex ->
                 if (ex != null) {
                     error = ex.localizedMessage
