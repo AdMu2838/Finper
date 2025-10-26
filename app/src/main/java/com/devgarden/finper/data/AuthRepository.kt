@@ -7,9 +7,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
-import java.text.SimpleDateFormat
 import java.util.Date
-import java.util.Locale
 
 // Añadir valores por defecto para permitir deserialización con Firestore
 data class UserProfile(
@@ -33,12 +31,28 @@ class AuthRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    // parseDateOrNull ahora construye la fecha a las 12:00 UTC para evitar
+    // que Firestore la muestre el día anterior en zonas horarias con offset negativo.
     private fun parseDateOrNull(dateStr: String?): Date? {
         if (dateStr.isNullOrBlank()) return null
         return try {
-            val sdf = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
-            sdf.isLenient = false
-            sdf.parse(dateStr)
+            // Esperamos formato dd/MM/yyyy
+            val parts = dateStr.trim().split('/').map { it.toInt() }
+            if (parts.size != 3) return null
+            val day = parts[0]
+            val month = parts[1] - 1 // Calendar months are 0-based
+            val year = parts[2]
+
+            val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
+            cal.set(java.util.Calendar.YEAR, year)
+            cal.set(java.util.Calendar.MONTH, month)
+            cal.set(java.util.Calendar.DAY_OF_MONTH, day)
+            // Poner la hora a las 12:00 (mediodía) UTC — así la fecha no cambia al convertir a otras zonas
+            cal.set(java.util.Calendar.HOUR_OF_DAY, 12)
+            cal.set(java.util.Calendar.MINUTE, 0)
+            cal.set(java.util.Calendar.SECOND, 0)
+            cal.set(java.util.Calendar.MILLISECOND, 0)
+            cal.time
         } catch (_: Exception) {
             null
         }
