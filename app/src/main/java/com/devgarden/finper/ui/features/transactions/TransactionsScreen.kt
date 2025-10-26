@@ -1,3 +1,4 @@
+@file:Suppress("unused")
 package com.devgarden.finper.ui.features.transactions
 
 import android.app.DatePickerDialog
@@ -141,8 +142,8 @@ fun TransactionList(
 }
 
 // Helpers de formato de fecha/hora
-private val dateFormatter = SimpleDateFormat("d 'de' MMMM yyyy", Locale("es"))
-private val timeFormatter = SimpleDateFormat("h:mm a", Locale("es"))
+private val dateFormatter = SimpleDateFormat("d 'de' MMMM yyyy", Locale.forLanguageTag("es"))
+private val timeFormatter = SimpleDateFormat("h:mm a", Locale.forLanguageTag("es"))
 
 private fun formatDateForDisplay(date: Date?): String {
     if (date == null) return ""
@@ -176,12 +177,18 @@ private fun TransactionsHeader(balanceText: String) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // Obtener gastos del mes desde TransactionsViewModel
+            val transactionsViewModel: TransactionsViewModel = viewModel()
+            val monthlyExpenses = transactionsViewModel.monthlyExpenses
+            val monthlyLoading = transactionsViewModel.monthlyLoading
+            val expenseStr = if (monthlyLoading) "-S/.--" else "-${formatCurrency(monthlyExpenses)}"
+
             SummaryCard(
                 balanceLabel = "Balance Total",
                 balanceValue = balanceText,
                 expenseLabel = "Gastos",
-                expenseValue = "-S/.1,187.40",
-                progress = 0.3f,
+                expenseValue = expenseStr,
+                //progress = 0.3f,
                 progressLabel = ""
             )
         }
@@ -214,9 +221,15 @@ private fun ControlsSection(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
+                // Usar el ViewModel de transacciones para obtener gastos del mes
+                val transactionsViewModel: TransactionsViewModel = viewModel()
+                val monthlyExpenses = transactionsViewModel.monthlyExpenses
+                val monthlyLoading = transactionsViewModel.monthlyLoading
+                val expenseStr = if (monthlyLoading) "S/.--" else formatCurrency(monthlyExpenses)
+
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Gastos", fontWeight = FontWeight.SemiBold)
-                    Text("S/.1,187.40", fontWeight = FontWeight.Bold)
+                    Text("${expenseStr}", fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -478,7 +491,7 @@ fun TransactionsScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(horizontal = 16.dp, vertical = 8.dp),
-                transactions = filtered
+                transactions = if (filtered.isNotEmpty()) filtered else sampleTransactions
             )
         }
 

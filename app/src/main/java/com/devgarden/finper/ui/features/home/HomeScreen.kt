@@ -80,7 +80,6 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
             cal.set(Calendar.MILLISECOND, 999)
         }
 
-        val now = Calendar.getInstance()
         val (start: Date?, end: Date?) = when (selectedPeriod) {
             0 -> { // Diario
                 val s = Calendar.getInstance().apply { startOfDay(this) }.time
@@ -177,8 +176,8 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
 }
 
 // Helpers de formato de fecha/hora
-private val dateFormatter = SimpleDateFormat("d 'de' MMMM yyyy", Locale("es"))
-private val timeFormatter = SimpleDateFormat("h:mm a", Locale("es"))
+private val dateFormatter = SimpleDateFormat("d 'de' MMMM yyyy", Locale.forLanguageTag("es"))
+private val timeFormatter = SimpleDateFormat("h:mm a", Locale.forLanguageTag("es"))
 
 private fun formatDateForDisplay(date: Date?): String {
     if (date == null) return ""
@@ -205,6 +204,12 @@ fun HeaderSection() {
     val userViewModel: UserViewModel = viewModel()
     val balance = userViewModel.balance
     val balanceStr = formatCurrency(balance)
+
+    // Obtener gastos del mes desde TransactionsViewModel
+    val transactionsViewModel: TransactionsViewModel = viewModel()
+    val monthlyExpenses = transactionsViewModel.monthlyExpenses
+    val monthlyLoading = transactionsViewModel.monthlyLoading
+    val expenseStr = if (monthlyLoading) "-S/.--" else "-${formatCurrency(monthlyExpenses)}"
 
     Column(
         modifier = Modifier
@@ -235,9 +240,9 @@ fun HeaderSection() {
             balanceLabel = "Presupuesto Total",
             balanceValue = balanceStr,
             expenseLabel = "Gasto Del Mes",
-            expenseValue = "-S/.1,187.40",
-            progress = 0.3f,
-            progressLabel = "30% De Tus Gastos, Se Ve Bien."
+            expenseValue = expenseStr,
+            //progress = 0.3f,
+            progressLabel = ""
         )
     }
 }

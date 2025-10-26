@@ -51,7 +51,7 @@ fun SummaryCard(
     balanceValue: String,
     expenseLabel: String,
     expenseValue: String,
-    progress: Float,
+    //progress: Float,
     progressLabel: String
 ) {
     Card(
@@ -74,10 +74,10 @@ fun SummaryCard(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            LinearProgressIndicator(progress = { progress }, modifier = Modifier
+            /*LinearProgressIndicator(progress = { progress }, modifier = Modifier
                 .fillMaxWidth()
                 .height(8.dp)
-                .clip(RoundedCornerShape(8.dp)), color = Color(0xFF00B974), trackColor = Color(0xFFF0F6F3))
+                .clip(RoundedCornerShape(8.dp)), color = Color(0xFF00B974), trackColor = Color(0xFFF0F6F3))*/
             Spacer(modifier = Modifier.height(8.dp))
             Text(text = progressLabel, fontSize = 12.sp, color = Color(0xFF15323B))
         }

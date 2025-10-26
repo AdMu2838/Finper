@@ -68,7 +68,7 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
                 balanceValue = balanceStr,
                 expenseLabel = "Total Expense",
                 expenseValue = "-S/.1,187.40",
-                progress = 0.3f,
+                //progress = 0.3f,
                 progressLabel = "30% of Your Expenses, Looks Good."
             )
 

@@ -38,10 +38,24 @@ class TransactionsViewModel : ViewModel() {
         private set
 
     private var listener: ListenerRegistration? = null
+    // Listener separado para el cálculo/escucha de gastos del mes
+    private var monthlyListener: ListenerRegistration? = null
+
+    // Estado específico para gastos del mes
+    var monthlyExpenses by mutableStateOf(0.0)
+        private set
+
+    var monthlyLoading by mutableStateOf(false)
+        private set
+
+    var monthlyError by mutableStateOf<String?>(null)
+        private set
 
     init {
         // por defecto cargar todas las transacciones (sin rango)
         listenTransactionsRange(null, null)
+        // también empezar a escuchar los gastos del mes actual
+        listenCurrentMonthExpenses()
     }
 
     private fun attachQueryListener(query: Query) {
@@ -85,6 +99,139 @@ class TransactionsViewModel : ViewModel() {
             }
 
             loading = false
+        }
+    }
+
+    // --- Utilidades para inicio/fin de mes ---
+    private fun startOfMonth(date: Date = Date()): Date {
+        val cal = Calendar.getInstance()
+        cal.time = date
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH))
+        cal.set(Calendar.HOUR_OF_DAY, 0)
+        cal.set(Calendar.MINUTE, 0)
+        cal.set(Calendar.SECOND, 0)
+        cal.set(Calendar.MILLISECOND, 0)
+        return cal.time
+    }
+
+    private fun endOfMonth(date: Date = Date()): Date {
+        val cal = Calendar.getInstance()
+        cal.time = date
+        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
+        cal.set(Calendar.HOUR_OF_DAY, 23)
+        cal.set(Calendar.MINUTE, 59)
+        cal.set(Calendar.SECOND, 59)
+        cal.set(Calendar.MILLISECOND, 999)
+        return cal.time
+    }
+
+    /**
+     * Escucha en tiempo real la suma de gastos (isExpense == true) desde el primer día hasta el último día del mes actual.
+     */
+    fun listenCurrentMonthExpenses() {
+        val user = auth.currentUser
+        if (user == null) {
+            monthlyListener?.remove()
+            monthlyListener = null
+            monthlyExpenses = 0.0
+            monthlyLoading = false
+            monthlyError = "Usuario no autenticado"
+            return
+        }
+
+        monthlyListener?.remove()
+        monthlyLoading = true
+        monthlyError = null
+
+        try {
+            val start = startOfMonth()
+            val end = endOfMonth()
+
+            var query: Query = db.collection("users").document(user.uid).collection("transactions")
+                .whereGreaterThanOrEqualTo("date", Timestamp(start))
+                .whereLessThanOrEqualTo("date", Timestamp(end))
+                .whereEqualTo("isExpense", true)
+
+            // no necesitamos ordenar para sumar, pero podemos hacerlo por fecha
+            query = query.orderBy("date", Query.Direction.DESCENDING)
+
+            monthlyListener = query.addSnapshotListener { snapshot, ex ->
+                if (ex != null) {
+                    monthlyError = ex.localizedMessage
+                    monthlyLoading = false
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    var sum = 0.0
+                    for (doc in snapshot.documents) {
+                        try {
+                            val rawAmount = doc.get("amount")
+                            val amount = when (rawAmount) {
+                                is Number -> rawAmount.toDouble()
+                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
+                                else -> 0.0
+                            }
+                            sum += amount
+                        } catch (_: Exception) {
+                            // ignorar doc mal formado
+                        }
+                    }
+                    monthlyExpenses = sum
+                } else {
+                    monthlyExpenses = 0.0
+                }
+
+                monthlyLoading = false
+            }
+        } catch (ex: Exception) {
+            monthlyError = ex.localizedMessage
+            monthlyLoading = false
+        }
+    }
+
+    /**
+     * Consulta puntual que calcula la suma de gastos del mes actual una sola vez y devuelve el resultado por callback.
+     */
+    @Suppress("unused")
+    fun calculateCurrentMonthExpensesOnce(onComplete: (Double, String?) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            onComplete(0.0, "Usuario no autenticado")
+            return
+        }
+
+        try {
+            val start = startOfMonth()
+            val end = endOfMonth()
+
+            val query = db.collection("users").document(user.uid).collection("transactions")
+                .whereGreaterThanOrEqualTo("date", Timestamp(start))
+                .whereLessThanOrEqualTo("date", Timestamp(end))
+                .whereEqualTo("isExpense", true)
+
+            query.get()
+                .addOnSuccessListener { snapshot ->
+                    var sum = 0.0
+                    for (doc in snapshot.documents) {
+                        try {
+                            val rawAmount = doc.get("amount")
+                            val amount = when (rawAmount) {
+                                is Number -> rawAmount.toDouble()
+                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
+                                else -> 0.0
+                            }
+                            sum += amount
+                        } catch (_: Exception) {
+                        }
+                    }
+                    onComplete(sum, null)
+                }
+                .addOnFailureListener { ex ->
+                    onComplete(0.0, ex.localizedMessage)
+                }
+        } catch (ex: Exception) {
+            onComplete(0.0, ex.localizedMessage)
         }
     }
 
@@ -172,5 +319,7 @@ class TransactionsViewModel : ViewModel() {
         super.onCleared()
         listener?.remove()
         listener = null
+        monthlyListener?.remove()
+        monthlyListener = null
     }
 }
