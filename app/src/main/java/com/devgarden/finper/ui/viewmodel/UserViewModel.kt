@@ -5,19 +5,42 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.devgarden.finper.data.UsuarioActual
+import com.devgarden.finper.utils.Constants
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 
+/**
+ * ViewModel que gestiona el estado del usuario actual.
+ * Mantiene sincronizado el perfil del usuario y su balance en tiempo real con Firebase.
+ */
 class UserViewModel : ViewModel() {
+
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
+    /**
+     * Usuario actualmente autenticado.
+     */
     var usuario by mutableStateOf<UsuarioActual?>(null)
         private set
 
-    // balance observable (por defecto 0.0)
-    var balance by mutableStateOf(0.0)
+    /**
+     * Balance actual del usuario (sincronizado en tiempo real).
+     */
+    var balance by mutableStateOf(Constants.Defaults.DEFAULT_BALANCE)
+        private set
+
+    /**
+     * Estado de carga del perfil.
+     */
+    var loading by mutableStateOf(false)
+        private set
+
+    /**
+     * Error al cargar el perfil.
+     */
+    var error by mutableStateOf<String?>(null)
         private set
 
     private var userListener: ListenerRegistration? = null
@@ -26,80 +49,67 @@ class UserViewModel : ViewModel() {
         cargarUsuarioActual()
     }
 
+    /**
+     * Carga el usuario actual desde Firebase Auth y Firestore.
+     * Establece un listener en tiempo real para mantener el balance actualizado.
+     */
     fun cargarUsuarioActual() {
         val user = auth.currentUser
-        if (user != null) {
-            // Cancel previous listener if any
-            userListener?.remove()
-
-            // Escuchar cambios en el documento del usuario para mantener balance en tiempo real
-            val docRef = db.collection("users").document(user.uid)
-            userListener = docRef.addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    // En caso de error, fallback a datos de auth
-                    usuario = UsuarioActual(
-                        uid = user.uid,
-                        nombre = user.displayName ?: "Usuario",
-                        correo = user.email ?: "",
-                        telefono = ""
-                    )
-                    balance = balance.takeIf { it >= 0.0 } ?: 0.0
-                    return@addSnapshotListener
-                }
-
-                if (snapshot != null && snapshot.exists()) {
-                    val nombre = snapshot.getString("fullName") ?: user.displayName ?: "Usuario"
-                    val correo = snapshot.getString("email") ?: user.email ?: ""
-                    val telefono = snapshot.getString("phone") ?: ""
-                    val balanceField = try {
-                        val raw = snapshot.get("balance")
-                        if (raw is Number) raw.toDouble() else 0.0
-                    } catch (_: Exception) { 0.0 }
-
-                    usuario = UsuarioActual(
-                        uid = user.uid,
-                        nombre = nombre,
-                        correo = correo,
-                        telefono = telefono
-                    )
-                    balance = balanceField
-                } else {
-                    // Si no está en Firestore, usar lo de FirebaseAuth
-                    usuario = UsuarioActual(
-                        uid = user.uid,
-                        nombre = user.displayName ?: "Usuario",
-                        correo = user.email ?: "",
-                        telefono = ""
-                    )
-                    balance = 0.0
-                }
-            }
-        } else {
-            usuario = null
-            balance = 0.0
-            userListener?.remove()
-            userListener = null
-        }
-    }
-
-    fun actualizarPerfil(nombre: String, telefono: String, correo: String, callback: (Boolean, String?) -> Unit) {
-        val user = auth.currentUser
         if (user == null) {
-            callback(false, "Usuario no autenticado")
+            clearUserData()
             return
         }
 
-        val data = hashMapOf<String, Any>(
-            "fullName" to nombre,
-            "email" to correo,
-            "phone" to telefono
-        )
+        loading = true
+        error = null
+        userListener?.remove()
 
-        db.collection("users").document(user.uid)
+        val docRef = db.collection(Constants.Firestore.COLLECTION_USERS).document(user.uid)
+        userListener = docRef.addSnapshotListener { snapshot, firebaseError ->
+            if (firebaseError != null) {
+                error = firebaseError.localizedMessage
+                loadFallbackUserData(user)
+                loading = false
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null && snapshot.exists()) {
+                loadUserDataFromSnapshot(snapshot, user)
+            } else {
+                loadFallbackUserData(user)
+            }
+
+            loading = false
+        }
+    }
+
+    /**
+     * Actualiza el perfil del usuario en Firestore.
+     *
+     * @param nombre Nombre completo del usuario
+     * @param telefono Número de teléfono
+     * @param correo Correo electrónico
+     * @param callback Callback con resultado (éxito, mensaje de error)
+     */
+    fun actualizarPerfil(
+        nombre: String,
+        telefono: String,
+        correo: String,
+        callback: (Boolean, String?) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(false, Constants.ErrorMessages.ERROR_USER_NOT_AUTHENTICATED)
+            return
+        }
+
+        val data = buildProfileUpdateData(nombre, correo, telefono)
+
+        db.collection(Constants.Firestore.COLLECTION_USERS)
+            .document(user.uid)
             .set(data)
             .addOnSuccessListener {
-                // Actualizar estado local
-                usuario = UsuarioActual(uid = user.uid, nombre = nombre, correo = correo, telefono = telefono)
+                updateLocalUserData(user.uid, nombre, correo, telefono)
                 callback(true, null)
             }
             .addOnFailureListener { ex ->
@@ -107,10 +117,121 @@ class UserViewModel : ViewModel() {
             }
     }
 
+    /**
+     * Cierra la sesión del usuario actual.
+     */
     fun cerrarSesion() {
         auth.signOut()
+        clearUserData()
+    }
+
+    // --- Métodos helper privados ---
+
+    /**
+     * Carga los datos del usuario desde un snapshot de Firestore.
+     */
+    private fun loadUserDataFromSnapshot(
+        snapshot: com.google.firebase.firestore.DocumentSnapshot,
+        user: com.google.firebase.auth.FirebaseUser
+    ) {
+        val nombre = snapshot.getString(Constants.Firestore.FIELD_FULL_NAME)
+            ?: user.displayName
+            ?: Constants.Defaults.DEFAULT_USER_NAME
+
+        val correo = snapshot.getString(Constants.Firestore.FIELD_EMAIL)
+            ?: user.email
+            ?: ""
+
+        val telefono = snapshot.getString(Constants.Firestore.FIELD_PHONE) ?: ""
+
+        val balanceField = extractBalanceFromSnapshot(snapshot)
+
+        usuario = UsuarioActual(
+            uid = user.uid,
+            nombre = nombre,
+            correo = correo,
+            telefono = telefono
+        )
+        balance = balanceField
+    }
+
+    /**
+     * Carga datos de fallback desde Firebase Auth cuando Firestore falla.
+     */
+    private fun loadFallbackUserData(user: com.google.firebase.auth.FirebaseUser) {
+        usuario = UsuarioActual(
+            uid = user.uid,
+            nombre = user.displayName ?: Constants.Defaults.DEFAULT_USER_NAME,
+            correo = user.email ?: "",
+            telefono = ""
+        )
+        balance = balance.takeIf { it >= 0.0 } ?: Constants.Defaults.DEFAULT_BALANCE
+    }
+
+    /**
+     * Extrae el balance del snapshot de Firestore de forma segura.
+     */
+    private fun extractBalanceFromSnapshot(
+        snapshot: com.google.firebase.firestore.DocumentSnapshot
+    ): Double {
+        return try {
+            val raw = snapshot.get(Constants.Firestore.FIELD_BALANCE)
+            when (raw) {
+                is Number -> raw.toDouble()
+                is String -> raw.toDoubleOrNull() ?: Constants.Defaults.DEFAULT_BALANCE
+                else -> Constants.Defaults.DEFAULT_BALANCE
+            }
+        } catch (_: Exception) {
+            Constants.Defaults.DEFAULT_BALANCE
+        }
+    }
+
+    /**
+     * Construye el mapa de datos para actualizar el perfil.
+     */
+    private fun buildProfileUpdateData(
+        nombre: String,
+        correo: String,
+        telefono: String
+    ): HashMap<String, Any> {
+        return hashMapOf(
+            Constants.Firestore.FIELD_FULL_NAME to nombre,
+            Constants.Firestore.FIELD_EMAIL to correo,
+            Constants.Firestore.FIELD_PHONE to telefono
+        )
+    }
+
+    /**
+     * Actualiza los datos del usuario en el estado local.
+     */
+    private fun updateLocalUserData(
+        uid: String,
+        nombre: String,
+        correo: String,
+        telefono: String
+    ) {
+        usuario = UsuarioActual(
+            uid = uid,
+            nombre = nombre,
+            correo = correo,
+            telefono = telefono
+        )
+    }
+
+    /**
+     * Limpia todos los datos del usuario.
+     */
+    private fun clearUserData() {
         usuario = null
-        balance = 0.0
+        balance = Constants.Defaults.DEFAULT_BALANCE
+        error = null
+        loading = false
+        userListener?.remove()
+        userListener = null
+    }
+
+    override fun onCleared() {
+        super.onCleared()
         userListener?.remove()
         userListener = null
     }

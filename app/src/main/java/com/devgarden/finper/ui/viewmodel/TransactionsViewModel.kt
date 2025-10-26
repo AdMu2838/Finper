@@ -4,21 +4,35 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
-import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.devgarden.finper.utils.Constants
+import com.devgarden.finper.utils.DateUtils
+import com.devgarden.finper.utils.FirebaseUtils
 import java.util.*
 
 /**
- * ViewModel que expone la lista de transacciones del usuario (subcolección 'transactions').
+ * ViewModel que gestiona las transacciones del usuario.
+ * Proporciona acceso a la lista de transacciones, gastos mensuales y consultas por categoría.
  */
 class TransactionsViewModel : ViewModel() {
+
     private val auth = FirebaseAuth.getInstance()
     private val db = FirebaseFirestore.getInstance()
 
+    /**
+     * Data Transfer Object para transacciones.
+     *
+     * @property id ID único de la transacción
+     * @property amount Monto de la transacción
+     * @property category Categoría de la transacción
+     * @property date Fecha de la transacción
+     * @property description Descripción o título
+     * @property isExpense Si es gasto (true) o ingreso (false)
+     */
     data class TransactionDto(
         val id: String,
         val amount: Double,
@@ -28,6 +42,7 @@ class TransactionsViewModel : ViewModel() {
         val isExpense: Boolean
     )
 
+    // --- Estados principales ---
     var transactions by mutableStateOf<List<TransactionDto>>(emptyList())
         private set
 
@@ -38,10 +53,8 @@ class TransactionsViewModel : ViewModel() {
         private set
 
     private var listener: ListenerRegistration? = null
-    // Listener separado para el cálculo/escucha de gastos del mes
-    private var monthlyListener: ListenerRegistration? = null
 
-    // Estado específico para gastos del mes
+    // --- Estados para gastos mensuales ---
     var monthlyExpenses by mutableStateOf(0.0)
         private set
 
@@ -51,7 +64,9 @@ class TransactionsViewModel : ViewModel() {
     var monthlyError by mutableStateOf<String?>(null)
         private set
 
-    // --- Estados para ingresos del mes ---
+    private var monthlyListener: ListenerRegistration? = null
+
+    // --- Estados para ingresos mensuales ---
     var monthlyIncomes by mutableStateOf(0.0)
         private set
 
@@ -63,7 +78,7 @@ class TransactionsViewModel : ViewModel() {
 
     private var monthlyIncomesListener: ListenerRegistration? = null
 
-    // --- Estados y métodos para consulta por categoría (server-side ordering) ---
+    // --- Estados para consultas por categoría ---
     var categoryTransactions by mutableStateOf<List<TransactionDto>>(emptyList())
         private set
 
@@ -73,21 +88,58 @@ class TransactionsViewModel : ViewModel() {
     var categoryError by mutableStateOf<String?>(null)
         private set
 
-    // Si Firestore devuelve el error de índice, la URL suele estar en el mensaje; la guardamos para que la UI la muestre
     var categoryIndexUrl by mutableStateOf<String?>(null)
         private set
 
+    init {
+        listenTransactionsRange(null, null)
+        listenCurrentMonthExpenses()
+        listenCurrentMonthIncomes()
+    }
+
     /**
-     * Carga (una vez) las transacciones que tienen exactamente la categoría dada.
-     * Intenta ordenar en el servidor por `date` DESC; si Firestore exige un índice, captura la URL y la expone en `categoryIndexUrl`.
+     * Escucha transacciones en tiempo real dentro de un rango de fechas.
+     *
+     * @param start Fecha de inicio del rango (null para sin límite)
+     * @param end Fecha de fin del rango (null para sin límite)
+     */
+    fun listenTransactionsRange(start: Date?, end: Date?) {
+        val user = auth.currentUser
+        if (user == null) {
+            clearTransactions(Constants.ErrorMessages.ERROR_USER_NOT_AUTHENTICATED)
+            return
+        }
+
+        var query: Query = buildBaseQuery(user.uid)
+
+        if (start != null && end != null) {
+            query = query
+                .whereGreaterThanOrEqualTo(
+                    Constants.Firestore.FIELD_DATE,
+                    FirebaseUtils.toFirebaseTimestamp(start)
+                )
+                .whereLessThanOrEqualTo(
+                    Constants.Firestore.FIELD_DATE,
+                    FirebaseUtils.toFirebaseTimestamp(end)
+                )
+        }
+
+        query = query.orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+
+        attachQueryListener(query)
+    }
+
+    /**
+     * Carga transacciones filtradas por categoría.
+     * Intenta ordenar en el servidor; si falla por falta de índice, ordena localmente.
+     *
+     * @param category Nombre de la categoría a filtrar
      */
     fun loadTransactionsByCategory(category: String) {
         val user = auth.currentUser
         if (user == null) {
-            categoryTransactions = emptyList()
-            categoryLoading = false
-            categoryError = "Usuario no autenticado"
-            categoryIndexUrl = null
+            clearCategoryQuery()
+            categoryError = Constants.ErrorMessages.ERROR_USER_NOT_AUTHENTICATED
             return
         }
 
@@ -96,86 +148,16 @@ class TransactionsViewModel : ViewModel() {
         categoryIndexUrl = null
 
         try {
-            db.collection("users").document(user.uid).collection("transactions")
-                .whereEqualTo("category", category)
-                .orderBy("date", Query.Direction.DESCENDING)
+            buildBaseQuery(user.uid)
+                .whereEqualTo(Constants.Firestore.FIELD_CATEGORY, category)
+                .orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
                 .get()
                 .addOnSuccessListener { snapshot ->
-                    val list = snapshot.documents.mapNotNull { doc ->
-                        try {
-                            val id = doc.id
-                            val rawAmount = doc.get("amount")
-                            val amount = when (rawAmount) {
-                                is Number -> rawAmount.toDouble()
-                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                                else -> 0.0
-                            }
-                            val categoryField = doc.getString("category") ?: ""
-                            val timestamp = doc.get("date")
-                            val date: Date? = when (timestamp) {
-                                is Timestamp -> timestamp.toDate()
-                                is Date -> timestamp
-                                else -> null
-                            }
-                            val description = doc.getString("description") ?: ""
-                            val isExpense = doc.getBoolean("isExpense") ?: false
-
-                            TransactionDto(id = id, amount = amount, category = categoryField, date = date, description = description, isExpense = isExpense)
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-                    categoryTransactions = list
+                    categoryTransactions = parseTransactionsSnapshot(snapshot.documents)
                     categoryLoading = false
                 }
                 .addOnFailureListener { ex ->
-                    categoryLoading = false
-                    categoryError = ex.localizedMessage
-                    // intentar extraer URL de índice si existe
-                    val msg = ex.localizedMessage ?: ""
-                    val regex = """https?://console.firebase.google.com[^"]+""".toRegex()
-                    val match = regex.find(msg)
-                    categoryIndexUrl = match?.value
-
-                    // Si la falla parece ser por índice, hacemos un fallback: consultar sin orderBy y ordenar localmente
-                    val idxRequired = msg.contains("requires an index") || categoryIndexUrl != null
-                    if (idxRequired) {
-                        // consultar sin orderBy
-                        db.collection("users").document(user.uid).collection("transactions")
-                            .whereEqualTo("category", category)
-                            .get()
-                            .addOnSuccessListener { snap2 ->
-                                val fallback = snap2.documents.mapNotNull { doc ->
-                                    try {
-                                        val id = doc.id
-                                        val rawAmount = doc.get("amount")
-                                        val amount = when (rawAmount) {
-                                            is Number -> rawAmount.toDouble()
-                                            is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                                            else -> 0.0
-                                        }
-                                        val categoryField = doc.getString("category") ?: ""
-                                        val timestamp = doc.get("date")
-                                        val date: Date? = when (timestamp) {
-                                            is Timestamp -> timestamp.toDate()
-                                            is Date -> timestamp
-                                            else -> null
-                                        }
-                                        val description = doc.getString("description") ?: ""
-                                        val isExpense = doc.getBoolean("isExpense") ?: false
-                                        TransactionDto(id = id, amount = amount, category = categoryField, date = date, description = description, isExpense = isExpense)
-                                    } catch (_: Exception) {
-                                        null
-                                    }
-                                }.sortedWith(compareByDescending<TransactionDto> { it.date ?: Date(0) })
-
-                                categoryTransactions = fallback
-                                // no cambiar categoryIndexUrl ni categoryError (mostramos link), categoryLoading ya false
-                            }
-                            .addOnFailureListener {
-                                // ignorar: ya tenemos categoryError
-                            }
-                    }
+                    handleCategoryQueryFailure(ex, user.uid, category)
                 }
         } catch (ex: Exception) {
             categoryLoading = false
@@ -184,6 +166,9 @@ class TransactionsViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Limpia el estado de la consulta por categoría.
+     */
     fun clearCategoryQuery() {
         categoryTransactions = emptyList()
         categoryLoading = false
@@ -191,19 +176,159 @@ class TransactionsViewModel : ViewModel() {
         categoryIndexUrl = null
     }
 
-    init {
-        // por defecto cargar todas las transacciones (sin rango)
-        listenTransactionsRange(null, null)
-        // también empezar a escuchar los gastos del mes actual
-        listenCurrentMonthExpenses()
-        // escuchar los ingresos del mes actual
-        listenCurrentMonthIncomes()
+    /**
+     * Escucha en tiempo real los gastos del mes actual.
+     */
+    fun listenCurrentMonthExpenses() {
+        listenMonthlyTransactions(
+            isExpense = true,
+            onUpdate = { sum -> monthlyExpenses = sum },
+            onLoading = { loading -> monthlyLoading = loading },
+            onError = { error -> monthlyError = error },
+            listenerRef = { monthlyListener = it }
+        )
     }
 
+    /**
+     * Escucha en tiempo real los ingresos del mes actual.
+     */
+    fun listenCurrentMonthIncomes() {
+        listenMonthlyTransactions(
+            isExpense = false,
+            onUpdate = { sum -> monthlyIncomes = sum },
+            onLoading = { loading -> monthlyIncomesLoading = loading },
+            onError = { error -> monthlyIncomesError = error },
+            listenerRef = { monthlyIncomesListener = it }
+        )
+    }
+
+    /**
+     * Añade una transacción en Firestore y actualiza el balance del usuario.
+     *
+     * @param amount Monto de la transacción
+     * @param category Categoría
+     * @param date Fecha de la transacción
+     * @param description Descripción
+     * @param isExpense Si es un gasto
+     * @param onComplete Callback con el resultado
+     */
+    fun addTransaction(
+        amount: Double,
+        category: String,
+        date: Date?,
+        description: String,
+        isExpense: Boolean,
+        onComplete: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            onComplete(false, Constants.ErrorMessages.ERROR_USER_NOT_AUTHENTICATED)
+            return
+        }
+
+        if (!FirebaseUtils.isValidTransactionAmount(amount)) {
+            onComplete(false, Constants.ErrorMessages.ERROR_INVALID_AMOUNT)
+            return
+        }
+
+        try {
+            val userRef = db.collection(Constants.Firestore.COLLECTION_USERS).document(user.uid)
+            val newDocRef = userRef.collection(Constants.Firestore.COLLECTION_TRANSACTIONS).document()
+
+            val data = FirebaseUtils.buildTransactionData(amount, category, date, description, isExpense)
+
+            val batch = db.batch()
+            batch.set(newDocRef, data)
+
+            val incrementValue = if (isExpense) -amount else amount
+            batch.update(userRef, Constants.Firestore.FIELD_BALANCE, FieldValue.increment(incrementValue))
+
+            batch.commit()
+                .addOnSuccessListener { onComplete(true, null) }
+                .addOnFailureListener { ex -> onComplete(false, ex.localizedMessage) }
+        } catch (ex: Exception) {
+            onComplete(false, ex.localizedMessage)
+        }
+    }
+
+    // --- Métodos helper privados ---
+
+    /**
+     * Construye la query base para transacciones.
+     */
+    private fun buildBaseQuery(uid: String): Query {
+        return db.collection(Constants.Firestore.COLLECTION_USERS)
+            .document(uid)
+            .collection(Constants.Firestore.COLLECTION_TRANSACTIONS)
+    }
+
+    /**
+     * Escucha transacciones mensuales (gastos o ingresos).
+     */
+    private fun listenMonthlyTransactions(
+        isExpense: Boolean,
+        onUpdate: (Double) -> Unit,
+        onLoading: (Boolean) -> Unit,
+        onError: (String?) -> Unit,
+        listenerRef: (ListenerRegistration?) -> Unit
+    ) {
+        val user = auth.currentUser
+        if (user == null) {
+            listenerRef(null)
+            onUpdate(0.0)
+            onLoading(false)
+            onError(Constants.ErrorMessages.ERROR_USER_NOT_AUTHENTICATED)
+            return
+        }
+
+        onLoading(true)
+        onError(null)
+
+        try {
+            val range = DateUtils.getMonthlyRange()
+
+            val query = buildBaseQuery(user.uid)
+                .whereGreaterThanOrEqualTo(
+                    Constants.Firestore.FIELD_DATE,
+                    FirebaseUtils.toFirebaseTimestamp(range.start)
+                )
+                .whereLessThanOrEqualTo(
+                    Constants.Firestore.FIELD_DATE,
+                    FirebaseUtils.toFirebaseTimestamp(range.end)
+                )
+                .whereEqualTo(Constants.Firestore.FIELD_IS_EXPENSE, isExpense)
+                .orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+
+            val listener = query.addSnapshotListener { snapshot, ex ->
+                if (ex != null) {
+                    onError(ex.localizedMessage)
+                    onLoading(false)
+                    return@addSnapshotListener
+                }
+
+                val sum = snapshot?.documents?.sumOf { doc ->
+                    FirebaseUtils.extractDouble(doc, Constants.Firestore.FIELD_AMOUNT, 0.0)
+                } ?: 0.0
+
+                onUpdate(sum)
+                onLoading(false)
+            }
+
+            listenerRef(listener)
+        } catch (ex: Exception) {
+            onError(ex.localizedMessage)
+            onLoading(false)
+        }
+    }
+
+    /**
+     * Adjunta un listener a una query de transacciones.
+     */
     private fun attachQueryListener(query: Query) {
         listener?.remove()
         loading = true
         error = null
+
         listener = query.addSnapshotListener { snapshot, ex ->
             if (ex != null) {
                 error = ex.localizedMessage
@@ -211,323 +336,90 @@ class TransactionsViewModel : ViewModel() {
                 return@addSnapshotListener
             }
 
-            if (snapshot != null) {
-                transactions = snapshot.documents.mapNotNull { doc ->
-                    try {
-                        val id = doc.id
-                        val rawAmount = doc.get("amount")
-                        val amount = when (rawAmount) {
-                            is Number -> rawAmount.toDouble()
-                            is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                            else -> 0.0
-                        }
-                        val category = doc.getString("category") ?: ""
-                        val timestamp = doc.get("date")
-                        val date: Date? = when (timestamp) {
-                            is Timestamp -> timestamp.toDate()
-                            is Date -> timestamp
-                            else -> null
-                        }
-                        val description = doc.getString("description") ?: ""
-                        val isExpense = doc.getBoolean("isExpense") ?: false
-
-                        TransactionDto(id = id, amount = amount, category = category, date = date, description = description, isExpense = isExpense)
-                    } catch (_: Exception) {
-                        null
-                    }
-                }
-            } else {
-                transactions = emptyList()
-            }
-
+            transactions = snapshot?.documents?.let { parseTransactionsSnapshot(it) } ?: emptyList()
             loading = false
         }
     }
 
-    // --- Utilidades para inicio/fin de mes ---
-    private fun startOfMonth(date: Date = Date()): Date {
-        val cal = Calendar.getInstance()
-        cal.time = date
-        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMinimum(Calendar.DAY_OF_MONTH))
-        cal.set(Calendar.HOUR_OF_DAY, 0)
-        cal.set(Calendar.MINUTE, 0)
-        cal.set(Calendar.SECOND, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        return cal.time
-    }
-
-    private fun endOfMonth(date: Date = Date()): Date {
-        val cal = Calendar.getInstance()
-        cal.time = date
-        cal.set(Calendar.DAY_OF_MONTH, cal.getActualMaximum(Calendar.DAY_OF_MONTH))
-        cal.set(Calendar.HOUR_OF_DAY, 23)
-        cal.set(Calendar.MINUTE, 59)
-        cal.set(Calendar.SECOND, 59)
-        cal.set(Calendar.MILLISECOND, 999)
-        return cal.time
-    }
-
     /**
-     * Escucha en tiempo real la suma de gastos (isExpense == true) desde el primer día hasta el último día del mes actual.
+     * Parsea documentos de Firestore a TransactionDto.
      */
-    fun listenCurrentMonthExpenses() {
-        val user = auth.currentUser
-        if (user == null) {
-            monthlyListener?.remove()
-            monthlyListener = null
-            monthlyExpenses = 0.0
-            monthlyLoading = false
-            monthlyError = "Usuario no autenticado"
-            return
-        }
-
-        monthlyListener?.remove()
-        monthlyLoading = true
-        monthlyError = null
-
-        try {
-            val start = startOfMonth()
-            val end = endOfMonth()
-
-            var query: Query = db.collection("users").document(user.uid).collection("transactions")
-                .whereGreaterThanOrEqualTo("date", Timestamp(start))
-                .whereLessThanOrEqualTo("date", Timestamp(end))
-                .whereEqualTo("isExpense", true)
-
-            // no necesitamos ordenar para sumar, pero podemos hacerlo por fecha
-            query = query.orderBy("date", Query.Direction.DESCENDING)
-
-            monthlyListener = query.addSnapshotListener { snapshot, ex ->
-                if (ex != null) {
-                    monthlyError = ex.localizedMessage
-                    monthlyLoading = false
-                    return@addSnapshotListener
-                }
-
-                if (snapshot != null) {
-                    var sum = 0.0
-                    for (doc in snapshot.documents) {
-                        try {
-                            val rawAmount = doc.get("amount")
-                            val amount = when (rawAmount) {
-                                is Number -> rawAmount.toDouble()
-                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                                else -> 0.0
-                            }
-                            sum += amount
-                        } catch (_: Exception) {
-                            // ignorar doc mal formado
-                        }
-                    }
-                    monthlyExpenses = sum
-                } else {
-                    monthlyExpenses = 0.0
-                }
-
-                monthlyLoading = false
+    private fun parseTransactionsSnapshot(
+        documents: List<com.google.firebase.firestore.DocumentSnapshot>
+    ): List<TransactionDto> {
+        return documents.mapNotNull { doc ->
+            try {
+                TransactionDto(
+                    id = doc.id,
+                    amount = FirebaseUtils.extractDouble(doc, Constants.Firestore.FIELD_AMOUNT),
+                    category = FirebaseUtils.extractString(
+                        doc,
+                        Constants.Firestore.FIELD_CATEGORY,
+                        Constants.Defaults.DEFAULT_CATEGORY
+                    ),
+                    date = FirebaseUtils.extractDate(doc, Constants.Firestore.FIELD_DATE),
+                    description = FirebaseUtils.extractString(doc, Constants.Firestore.FIELD_DESCRIPTION),
+                    isExpense = FirebaseUtils.extractBoolean(doc, Constants.Firestore.FIELD_IS_EXPENSE)
+                )
+            } catch (_: Exception) {
+                null
             }
-        } catch (ex: Exception) {
-            monthlyError = ex.localizedMessage
-            monthlyLoading = false
         }
     }
 
     /**
-     * Escucha en tiempo real la suma de ingresos (isExpense == false) desde el primer día hasta el último día del mes actual.
+     * Maneja errores de consultas por categoría.
      */
-    fun listenCurrentMonthIncomes() {
-        val user = auth.currentUser
-        if (user == null) {
-            monthlyIncomesListener?.remove()
-            monthlyIncomesListener = null
-            monthlyIncomes = 0.0
-            monthlyIncomesLoading = false
-            monthlyIncomesError = "Usuario no autenticado"
-            return
+    private fun handleCategoryQueryFailure(ex: Exception, userId: String, category: String) {
+        categoryLoading = false
+        categoryError = ex.localizedMessage
+
+        val msg = ex.localizedMessage ?: ""
+        val regex = """https?://console.firebase.google.com[^"]+""".toRegex()
+        categoryIndexUrl = regex.find(msg)?.value
+
+        val requiresIndex = msg.contains("requires an index") || categoryIndexUrl != null
+        if (requiresIndex) {
+            performCategoryQueryFallback(userId, category)
         }
+    }
 
-        monthlyIncomesListener?.remove()
-        monthlyIncomesLoading = true
-        monthlyIncomesError = null
-
-        try {
-            val start = startOfMonth()
-            val end = endOfMonth()
-
-            var query: Query = db.collection("users").document(user.uid).collection("transactions")
-                .whereGreaterThanOrEqualTo("date", Timestamp(start))
-                .whereLessThanOrEqualTo("date", Timestamp(end))
-                .whereEqualTo("isExpense", false)
-
-            query = query.orderBy("date", Query.Direction.DESCENDING)
-
-            monthlyIncomesListener = query.addSnapshotListener { snapshot, ex ->
-                if (ex != null) {
-                    monthlyIncomesError = ex.localizedMessage
-                    monthlyIncomesLoading = false
-                    return@addSnapshotListener
-                }
-
-                if (snapshot != null) {
-                    var sum = 0.0
-                    for (doc in snapshot.documents) {
-                        try {
-                            val rawAmount = doc.get("amount")
-                            val amount = when (rawAmount) {
-                                is Number -> rawAmount.toDouble()
-                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                                else -> 0.0
-                            }
-                            sum += amount
-                        } catch (_: Exception) {
-                            // ignorar doc mal formado
-                        }
-                    }
-                    monthlyIncomes = sum
-                } else {
-                    monthlyIncomes = 0.0
-                }
-
-                monthlyIncomesLoading = false
+    /**
+     * Realiza consulta de fallback sin ordenar en servidor.
+     */
+    private fun performCategoryQueryFallback(userId: String, category: String) {
+        buildBaseQuery(userId)
+            .whereEqualTo(Constants.Firestore.FIELD_CATEGORY, category)
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val transactions = parseTransactionsSnapshot(snapshot.documents)
+                categoryTransactions = transactions.sortedWith(
+                    compareByDescending { it.date ?: Date(0) }
+                )
             }
-        } catch (ex: Exception) {
-            monthlyIncomesError = ex.localizedMessage
-            monthlyIncomesLoading = false
-        }
-    }
-
-    /**
-     * Consulta puntual que calcula la suma de gastos del mes actual una sola vez y devuelve el resultado por callback.
-     */
-    @Suppress("unused")
-    fun calculateCurrentMonthExpensesOnce(onComplete: (Double, String?) -> Unit) {
-        val user = auth.currentUser
-        if (user == null) {
-            onComplete(0.0, "Usuario no autenticado")
-            return
-        }
-
-        try {
-            val start = startOfMonth()
-            val end = endOfMonth()
-
-            val query = db.collection("users").document(user.uid).collection("transactions")
-                .whereGreaterThanOrEqualTo("date", Timestamp(start))
-                .whereLessThanOrEqualTo("date", Timestamp(end))
-                .whereEqualTo("isExpense", true)
-
-            query.get()
-                .addOnSuccessListener { snapshot ->
-                    var sum = 0.0
-                    for (doc in snapshot.documents) {
-                        try {
-                            val rawAmount = doc.get("amount")
-                            val amount = when (rawAmount) {
-                                is Number -> rawAmount.toDouble()
-                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                                else -> 0.0
-                            }
-                            sum += amount
-                        } catch (_: Exception) {
-                        }
-                    }
-                    onComplete(sum, null)
-                }
-                .addOnFailureListener { ex ->
-                    onComplete(0.0, ex.localizedMessage)
-                }
-        } catch (ex: Exception) {
-            onComplete(0.0, ex.localizedMessage)
-        }
-    }
-
-    /**
-     * Suscribe a las transacciones en el rango [start, end] (ambos inclusive). Si start y end son null, escucha todas las transacciones.
-     */
-    fun listenTransactionsRange(start: Date?, end: Date?) {
-        val user = auth.currentUser
-        if (user == null) {
-            listener?.remove()
-            listener = null
-            transactions = emptyList()
-            loading = false
-            error = "Usuario no autenticado"
-            return
-        }
-
-        try {
-            var query: Query = db.collection("users").document(user.uid).collection("transactions")
-            if (start != null) {
-                query = query.whereGreaterThanOrEqualTo("date", Timestamp(start))
+            .addOnFailureListener {
+                // Ignorar: ya tenemos el error original
             }
-            if (end != null) {
-                query = query.whereLessThanOrEqualTo("date", Timestamp(end))
-            }
-            // ordenar por fecha descendente
-            query = query.orderBy("date", Query.Direction.DESCENDING)
-
-            attachQueryListener(query)
-        } catch (ex: Exception) {
-            error = ex.localizedMessage
-            loading = false
-        }
-    }
-
-    @Suppress("unused")
-    fun reload() {
-        listenTransactionsRange(null, null)
     }
 
     /**
-     * Añade una transacción en Firestore bajo users/{uid}/transactions y actualiza el balance del usuario atómicamente.
-     * date: si es null, se guardará el timestamp actual.
+     * Limpia el estado de transacciones.
      */
-    @Suppress("unused")
-    fun addTransaction(amount: Double, category: String, date: Date?, description: String, isExpense: Boolean, onComplete: (Boolean, String?) -> Unit = { _, _ -> }) {
-        val user = auth.currentUser
-        if (user == null) {
-            onComplete(false, "Usuario no autenticado")
-            return
-        }
-
-        try {
-            val userRef = db.collection("users").document(user.uid)
-            val newDocRef = userRef.collection("transactions").document() // generar id
-
-            val data = hashMapOf<String, Any>(
-                "amount" to amount,
-                "category" to category,
-                "date" to (date?.let { Timestamp(it) } ?: Timestamp.now()),
-                "description" to description,
-                "isExpense" to isExpense
-            )
-
-            val batch = db.batch()
-            batch.set(newDocRef, data)
-
-            // Incrementar balance: sumar para ingreso, restar para gasto
-            val incrementValue = if (isExpense) -amount else amount
-            batch.update(userRef, "balance", FieldValue.increment(incrementValue))
-
-            batch.commit()
-                .addOnSuccessListener {
-                    onComplete(true, null)
-                }
-                .addOnFailureListener { ex ->
-                    onComplete(false, ex.localizedMessage)
-                }
-        } catch (ex: Exception) {
-            onComplete(false, ex.localizedMessage)
-        }
+    private fun clearTransactions(errorMessage: String) {
+        listener?.remove()
+        transactions = emptyList()
+        loading = false
+        error = errorMessage
+        listener = null
     }
 
     override fun onCleared() {
         super.onCleared()
         listener?.remove()
-        listener = null
         monthlyListener?.remove()
-        monthlyListener = null
         monthlyIncomesListener?.remove()
+        listener = null
+        monthlyListener = null
         monthlyIncomesListener = null
     }
 }

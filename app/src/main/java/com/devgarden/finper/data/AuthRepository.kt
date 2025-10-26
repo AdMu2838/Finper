@@ -1,5 +1,7 @@
 package com.devgarden.finper.data
 
+import com.devgarden.finper.utils.Constants
+import com.devgarden.finper.utils.FirebaseUtils
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.firestore.FirebaseFirestore
@@ -9,17 +11,22 @@ import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.tasks.await
 import java.util.Date
 
-// Añadir valores por defecto para permitir deserialización con Firestore
+/**
+ * Data class para el perfil de usuario.
+ * Valores por defecto permiten deserialización segura desde Firestore.
+ */
 data class UserProfile(
     val uid: String = "",
     val fullName: String = "",
     val email: String = "",
     val phone: String = "",
     val birthDate: Date? = null,
-    val balance: Double = 0.0 // nuevo campo: balance total del usuario
+    val balance: Double = Constants.Defaults.DEFAULT_BALANCE
 )
 
-// Nueva entidad para ingresos fijos
+/**
+ * Data class para ingresos fijos.
+ */
 data class FixedIncome(
     val id: String = "",
     val amount: Double = 0.0,
@@ -27,37 +34,25 @@ data class FixedIncome(
     val createdAt: Date = Date()
 )
 
+/**
+ * Repositorio centralizado para operaciones de autenticación.
+ * Maneja registro, login y gestión de perfiles de usuario con Firebase.
+ */
 class AuthRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
-    // parseDateOrNull ahora construye la fecha a las 12:00 UTC para evitar
-    // que Firestore la muestre el día anterior en zonas horarias con offset negativo.
-    private fun parseDateOrNull(dateStr: String?): Date? {
-        if (dateStr.isNullOrBlank()) return null
-        return try {
-            // Esperamos formato dd/MM/yyyy
-            val parts = dateStr.trim().split('/').map { it.toInt() }
-            if (parts.size != 3) return null
-            val day = parts[0]
-            val month = parts[1] - 1 // Calendar months are 0-based
-            val year = parts[2]
 
-            val cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("UTC"))
-            cal.set(java.util.Calendar.YEAR, year)
-            cal.set(java.util.Calendar.MONTH, month)
-            cal.set(java.util.Calendar.DAY_OF_MONTH, day)
-            // Poner la hora a las 12:00 (mediodía) UTC — así la fecha no cambia al convertir a otras zonas
-            cal.set(java.util.Calendar.HOUR_OF_DAY, 12)
-            cal.set(java.util.Calendar.MINUTE, 0)
-            cal.set(java.util.Calendar.SECOND, 0)
-            cal.set(java.util.Calendar.MILLISECOND, 0)
-            cal.time
-        } catch (_: Exception) {
-            null
-        }
-    }
-
+    /**
+     * Registra un nuevo usuario con email y contraseña.
+     *
+     * @param fullName Nombre completo del usuario
+     * @param email Correo electrónico
+     * @param password Contraseña
+     * @param phone Número de teléfono
+     * @param birthDate Fecha de nacimiento en formato dd/MM/yyyy
+     * @return Result con el perfil del usuario o error
+     */
     suspend fun registerUser(
         fullName: String,
         email: String,
@@ -66,60 +61,70 @@ class AuthRepository(
         birthDate: String
     ): Result<UserProfile> {
         return try {
-            val authResult: AuthResult = auth.createUserWithEmailAndPassword(email.trim(), password).await()
-            val user = authResult.user ?: throw IllegalStateException("User is null after registration")
+            val authResult: AuthResult = auth.createUserWithEmailAndPassword(
+                email.trim(),
+                password
+            ).await()
 
-            val birthDateDate: Date? = parseDateOrNull(birthDate)
+            val user = authResult.user
+                ?: throw IllegalStateException(Constants.ErrorMessages.ERROR_NULL_USER)
+
+            val birthDateParsed = FirebaseUtils.parseDateDDMMYYYY(birthDate)
 
             val profile = UserProfile(
                 uid = user.uid,
                 fullName = fullName,
                 email = email.trim(),
                 phone = phone,
-                birthDate = birthDateDate,
-                balance = 0.0 // por defecto 0.0 al registrar
+                birthDate = birthDateParsed,
+                balance = Constants.Defaults.DEFAULT_BALANCE
             )
-            // Save profile to Firestore under collection "users" with document id = uid
-            firestore.collection("users").document(user.uid).set(profile).await()
+
+            saveUserProfile(user.uid, profile)
             Result.success(profile)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun signInWithGoogle(idToken: String, fullName: String?, phone: String?, birthDate: String?): Result<UserProfile> {
+    /**
+     * Inicia sesión con Google.
+     *
+     * @param idToken Token de Google
+     * @param fullName Nombre completo (opcional)
+     * @param phone Teléfono (opcional)
+     * @param birthDate Fecha de nacimiento (opcional)
+     * @return Result con el perfil del usuario o error
+     */
+    suspend fun signInWithGoogle(
+        idToken: String,
+        fullName: String?,
+        phone: String?,
+        birthDate: String?
+    ): Result<UserProfile> {
         return try {
             val credential = GoogleAuthProvider.getCredential(idToken, null)
             val authResult = auth.signInWithCredential(credential).await()
-            val user = authResult.user ?: throw IllegalStateException("User is null after Google sign-in")
+            val user = authResult.user
+                ?: throw IllegalStateException(Constants.ErrorMessages.ERROR_NULL_USER)
 
-            val birthDateDate: Date? = parseDateOrNull(birthDate)
+            val birthDateParsed = FirebaseUtils.parseDateDDMMYYYY(birthDate)
 
-            // Construir perfil base con información disponible
             val incomingProfile = UserProfile(
                 uid = user.uid,
                 fullName = fullName ?: user.displayName.orEmpty(),
                 email = user.email ?: "",
                 phone = phone ?: (user.phoneNumber ?: ""),
-                birthDate = birthDateDate,
-                balance = 0.0 // valor por defecto, será reemplazado si ya existe
+                birthDate = birthDateParsed,
+                balance = Constants.Defaults.DEFAULT_BALANCE
             )
 
-            // Leer documento existente para no sobrescribir balance u otros campos
-            val docRef = firestore.collection("users").document(user.uid)
-            val existingDoc = docRef.get().await()
-            val finalProfile = if (existingDoc.exists()) {
-                val existingBalance = try {
-                    val raw = existingDoc.get("balance")
-                    if (raw is Number) raw.toDouble() else 0.0
-                } catch (_: Exception) { 0.0 }
-                incomingProfile.copy(balance = existingBalance)
-            } else {
-                incomingProfile
-            }
+            val finalProfile = mergeWithExistingProfile(user.uid, incomingProfile)
 
-            // Guardar/merge profile a Firestore sin eliminar campos existentes
-            docRef.set(finalProfile, SetOptions.merge()).await()
+            firestore.collection(Constants.Firestore.COLLECTION_USERS)
+                .document(user.uid)
+                .set(finalProfile, SetOptions.merge())
+                .await()
 
             Result.success(finalProfile)
         } catch (e: Exception) {
@@ -127,56 +132,58 @@ class AuthRepository(
         }
     }
 
-    // Nueva función: login con email y password
-    suspend fun signInWithEmailPassword(email: String, password: String): Result<UserProfile> {
+    /**
+     * Inicia sesión con email y contraseña.
+     *
+     * @param email Correo electrónico
+     * @param password Contraseña
+     * @return Result con el perfil del usuario o error
+     */
+    suspend fun signInWithEmailPassword(
+        email: String,
+        password: String
+    ): Result<UserProfile> {
         return try {
-            val authResult = auth.signInWithEmailAndPassword(email.trim(), password).await()
-            val user = authResult.user ?: throw IllegalStateException("User is null after sign-in")
+            val authResult = auth.signInWithEmailAndPassword(
+                email.trim(),
+                password
+            ).await()
 
-            // Intentar obtener perfil guardado en Firestore
-            val doc = firestore.collection("users").document(user.uid).get().await()
+            val user = authResult.user
+                ?: throw IllegalStateException(Constants.ErrorMessages.ERROR_NULL_USER)
 
-            // Primero intentamos deserializar normalmente
-            val profileFromDb: UserProfile? = try {
-                doc.toObject(UserProfile::class.java)
-            } catch (_: Exception) {
-                null
-            }
-
-            // Si deserialización falla o es null, leer campos individuales como fallback
-            val profile = if (profileFromDb != null) {
-                profileFromDb
-            } else {
-                val fullName = doc.getString("fullName") ?: user.displayName ?: ""
-                val emailDb = doc.getString("email") ?: user.email ?: email.trim()
-                val phone = doc.getString("phone") ?: user.phoneNumber ?: ""
-                val birthDateField = try { doc.getDate("birthDate") } catch (_: Exception) { null }
-                val balanceField = try {
-                    val raw = doc.get("balance")
-                    if (raw is Number) raw.toDouble() else 0.0
-                } catch (_: Exception) { 0.0 }
-
-                UserProfile(
-                    uid = user.uid,
-                    fullName = fullName,
-                    email = emailDb,
-                    phone = phone,
-                    birthDate = birthDateField,
-                    balance = balanceField
-                )
-            }
-
+            val profile = fetchUserProfile(user.uid, user)
             Result.success(profile)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Nueva función: agregar un ingreso fijo y actualizar el balance del usuario
-    suspend fun addFixedIncome(uid: String, amount: Double, description: String? = null): Result<Unit> {
-        if (amount <= 0.0) return Result.failure(IllegalArgumentException("El monto debe ser mayor que 0"))
+    /**
+     * Agrega un ingreso fijo y actualiza el balance del usuario.
+     *
+     * @param uid ID del usuario
+     * @param amount Monto del ingreso
+     * @param description Descripción del ingreso
+     * @return Result exitoso o error
+     */
+    suspend fun addFixedIncome(
+        uid: String,
+        amount: Double,
+        description: String? = null
+    ): Result<Unit> {
+        if (!FirebaseUtils.isValidTransactionAmount(amount)) {
+            return Result.failure(
+                IllegalArgumentException(Constants.ErrorMessages.ERROR_INVALID_AMOUNT)
+            )
+        }
+
         return try {
-            val incomesColl = firestore.collection("users").document(uid).collection("fixedIncomes")
+            val incomesColl = firestore
+                .collection(Constants.Firestore.COLLECTION_USERS)
+                .document(uid)
+                .collection(Constants.Firestore.COLLECTION_FIXED_INCOMES)
+
             val docRef = incomesColl.document()
             val income = FixedIncome(
                 id = docRef.id,
@@ -184,11 +191,103 @@ class AuthRepository(
                 description = description ?: "",
                 createdAt = Date()
             )
+
             docRef.set(income).await()
-            firestore.collection("users").document(uid).update("balance", FieldValue.increment(amount)).await()
+
+            firestore.collection(Constants.Firestore.COLLECTION_USERS)
+                .document(uid)
+                .update(Constants.Firestore.FIELD_BALANCE, FieldValue.increment(amount))
+                .await()
+
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    // --- Métodos helper privados ---
+
+    /**
+     * Guarda el perfil del usuario en Firestore.
+     */
+    private suspend fun saveUserProfile(uid: String, profile: UserProfile) {
+        firestore.collection(Constants.Firestore.COLLECTION_USERS)
+            .document(uid)
+            .set(profile)
+            .await()
+    }
+
+    /**
+     * Obtiene el perfil del usuario desde Firestore.
+     */
+    private suspend fun fetchUserProfile(
+        uid: String,
+        user: com.google.firebase.auth.FirebaseUser
+    ): UserProfile {
+        val doc = firestore.collection(Constants.Firestore.COLLECTION_USERS)
+            .document(uid)
+            .get()
+            .await()
+
+        return try {
+            doc.toObject(UserProfile::class.java) ?: buildFallbackProfile(doc, user)
+        } catch (_: Exception) {
+            buildFallbackProfile(doc, user)
+        }
+    }
+
+    /**
+     * Construye un perfil de fallback cuando la deserialización falla.
+     */
+    private fun buildFallbackProfile(
+        doc: com.google.firebase.firestore.DocumentSnapshot,
+        user: com.google.firebase.auth.FirebaseUser
+    ): UserProfile {
+        return UserProfile(
+            uid = user.uid,
+            fullName = FirebaseUtils.extractString(
+                doc,
+                Constants.Firestore.FIELD_FULL_NAME,
+                user.displayName ?: Constants.Defaults.DEFAULT_USER_NAME
+            ),
+            email = FirebaseUtils.extractString(
+                doc,
+                Constants.Firestore.FIELD_EMAIL,
+                user.email ?: ""
+            ),
+            phone = FirebaseUtils.extractString(
+                doc,
+                Constants.Firestore.FIELD_PHONE,
+                user.phoneNumber ?: ""
+            ),
+            birthDate = FirebaseUtils.extractDate(doc, "birthDate"),
+            balance = FirebaseUtils.extractDouble(
+                doc,
+                Constants.Firestore.FIELD_BALANCE,
+                Constants.Defaults.DEFAULT_BALANCE
+            )
+        )
+    }
+
+    /**
+     * Combina el perfil entrante con el existente en Firestore.
+     */
+    private suspend fun mergeWithExistingProfile(
+        uid: String,
+        incomingProfile: UserProfile
+    ): UserProfile {
+        val docRef = firestore.collection(Constants.Firestore.COLLECTION_USERS).document(uid)
+        val existingDoc = docRef.get().await()
+
+        return if (existingDoc.exists()) {
+            val existingBalance = FirebaseUtils.extractDouble(
+                existingDoc,
+                Constants.Firestore.FIELD_BALANCE,
+                Constants.Defaults.DEFAULT_BALANCE
+            )
+            incomingProfile.copy(balance = existingBalance)
+        } else {
+            incomingProfile
         }
     }
 }
