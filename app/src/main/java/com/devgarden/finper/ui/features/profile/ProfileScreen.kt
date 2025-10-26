@@ -73,10 +73,6 @@ private fun ProfileScreenContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                IconButton(onClick = { /* volver */ }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.White)
-                }
-
                 Text(
                     text = "Perfil",
                     color = Color.White,
