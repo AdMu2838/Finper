@@ -3,6 +3,7 @@ package com.devgarden.finper.ui.features.profile
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -46,12 +47,12 @@ private fun ProfileScreenContent(
     onBottomItemSelected: (Int) -> Unit = {},
     onLogout: () -> Unit = {},
     onEditProfile: () -> Unit = {},
-    onSecurity: () -> Unit = {} // propagar callback
+    onSecurity: () -> Unit = {}
 ) {
     var bottomSelected by remember { mutableIntStateOf(4) } // perfil seleccionado
     val effectiveName = when {
-        !usuario?.nombre.isNullOrBlank() -> usuario.nombre
-        !usuario?.correo.isNullOrBlank() -> usuario.correo.substringBefore("@")
+        !usuario?.nombre.isNullOrBlank() -> usuario!!.nombre
+        !usuario?.correo.isNullOrBlank() -> usuario!!.correo.substringBefore("@")
         else -> "Usuario"
     }
 
@@ -71,9 +72,9 @@ private fun ProfileScreenContent(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                    .padding(horizontal = 20.dp, vertical = 40.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.Center
             ) {
                 Text(
                     text = "Perfil",
@@ -81,10 +82,6 @@ private fun ProfileScreenContent(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
-
-                IconButton(onClick = { /* notificaciones */ }) {
-                    Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
-                }
             }
         }
 

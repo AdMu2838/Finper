@@ -25,6 +25,7 @@ import com.devgarden.finper.ui.features.home.HomeScreen
 import com.devgarden.finper.ui.features.profile.ProfileScreen
 import com.devgarden.finper.ui.features.profile.EditProfileScreen
 import com.devgarden.finper.ui.features.profile.SecurityScreen
+import com.devgarden.finper.ui.features.categories.CategoriesScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -252,6 +253,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
                 when (index) {
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     else -> Unit
                 }
             })
@@ -262,6 +264,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
             ProfileScreen(userViewModel, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     else -> Unit
                 }
@@ -290,6 +293,19 @@ fun AppNavigation(userViewModel: UserViewModel) {
             SecurityScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    else -> Unit
+                }
+            })
+        }
+
+        // Pantalla Categories
+        composable(Screen.Categories.route) {
+            CategoriesScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
+                when (index) {
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     else -> Unit
                 }

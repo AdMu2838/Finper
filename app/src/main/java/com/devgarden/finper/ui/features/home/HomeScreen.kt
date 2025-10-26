@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.components.BottomBar
+import com.devgarden.finper.ui.components.SummaryCard
 
 
 // --- Data class to represent a transaction ---
@@ -124,31 +125,15 @@ fun HeaderSection() {
         }
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- Budget and Expense Info ---
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround
-        ) {
-            InfoCard("Presupuesto Total", "S/.7,783.00", Icons.Default.AccountBalanceWallet)
-            InfoCard("Gasto Del Mes", "-S/.1,187.40", Icons.Default.AccountBalanceWallet, isExpense = true)
-        }
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // --- Progress Bar ---
-        Text(
-            text = "30% De Tus Gastos, Se Ve Bien.",
-            color = Color.White.copy(alpha = 0.9f),
-            fontSize = 14.sp
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { 0.3f },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(10.dp)
-                .clip(CircleShape),
-            color = Color.White,
-            trackColor = Color.White.copy(alpha = 0.3f)
+        // Reusable summary card replaces the InfoCard + progress section
+        SummaryCard(
+            modifier = Modifier.padding(bottom = 16.dp),
+            balanceLabel = "Presupuesto Total",
+            balanceValue = "S/.7,783.00",
+            expenseLabel = "Gasto Del Mes",
+            expenseValue = "-S/.1,187.40",
+            progress = 0.3f,
+            progressLabel = "30% De Tus Gastos, Se Ve Bien."
         )
     }
 }
