@@ -67,7 +67,9 @@ dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
     implementation("com.google.firebase:firebase-analytics")
     implementation("com.google.firebase:firebase-auth")
-    implementation ("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-firestore")
     // Google Sign-In
     implementation("com.google.android.gms:play-services-auth:20.5.0")
+    // Biometric Authentication
+    implementation("androidx.biometric:biometric:1.1.0")
 }

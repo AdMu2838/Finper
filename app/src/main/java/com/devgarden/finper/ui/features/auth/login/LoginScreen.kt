@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -15,20 +16,25 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.devgarden.finper.MainActivity
 import com.devgarden.finper.ui.theme.DarkTextColor
 import com.devgarden.finper.ui.theme.GrayTextColor
 import com.devgarden.finper.ui.theme.LightGreenGray
 import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.R
+import com.devgarden.finper.ui.features.auth.security.BiometricAuthManager
+import com.devgarden.finper.ui.features.auth.security.BiometricViewModel
+import com.devgarden.finper.ui.features.auth.security.BiometricStatus
 
 @Composable
 fun LoginScreen(
@@ -36,11 +42,22 @@ fun LoginScreen(
     onRegisterClick: () -> Unit,
     onForgotPasswordClick: () -> Unit,
     onGoogleLoginClick: () -> Unit,
-    //onFacebookLoginClick: () -> Unit
+    onBiometricLoginSuccess: () -> Unit = {},
+    biometricViewModel: BiometricViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var isPasswordVisible by rememberSaveable { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val activity = context as? MainActivity
+
+    var showBiometricError by remember { mutableStateOf(false) }
+    var biometricErrorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(Unit) {
+        biometricViewModel.initialize(context)
+    }
 
     Box(
         modifier = Modifier
@@ -82,7 +99,7 @@ fun LoginScreen(
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
-                        colors = OutlinedTextFieldDefaults.colors( // Personaliza los colores del OutlinedTextField
+                        colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryGreen,
                             unfocusedBorderColor = Color.LightGray,
                             focusedLabelColor = PrimaryGreen,
@@ -107,7 +124,7 @@ fun LoginScreen(
                                 Icon(imageVector = image, contentDescription = description)
                             }
                         },
-                        colors = OutlinedTextFieldDefaults.colors( // Personaliza los colores del OutlinedTextField
+                        colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryGreen,
                             unfocusedBorderColor = Color.LightGray,
                             focusedLabelColor = PrimaryGreen,
@@ -138,20 +155,64 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LightGreenGray) // Color de fondo claro
+                        colors = ButtonDefaults.buttonColors(containerColor = LightGreenGray)
                     ) {
                         Text("Registrarse", fontSize = 18.sp, color = DarkTextColor)
                     }
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    Text(
-                        text = "Usa Tu Huella Para Entrar",
-                        color = DarkTextColor,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    // Botón de huella digital (solo si está habilitado)
+                    if (biometricViewModel.biometricEnabled &&
+                        biometricViewModel.biometricStatus == BiometricStatus.READY &&
+                        activity != null) {
+
+                        Text(
+                            text = "Usa Tu Huella Para Entrar",
+                            color = DarkTextColor,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        IconButton(
+                            onClick = {
+                                val biometricManager = BiometricAuthManager(context)
+                                biometricManager.authenticate(
+                                    activity = activity,
+                                    title = "Iniciar Sesión",
+                                    subtitle = "Verifica tu identidad",
+                                    description = "Usa tu huella digital para iniciar sesión",
+                                    onSuccess = {
+                                        onBiometricLoginSuccess()
+                                    },
+                                    onError = { _, errorMessage ->
+                                        biometricErrorMessage = errorMessage
+                                        showBiometricError = true
+                                    },
+                                    onFailed = {
+                                        biometricErrorMessage = "Huella digital no reconocida"
+                                        showBiometricError = true
+                                    }
+                                )
+                            },
+                            modifier = Modifier
+                                .size(80.dp)
+                                .background(
+                                    color = PrimaryGreen.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(40.dp)
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Fingerprint,
+                                contentDescription = "Huella Digital",
+                                tint = PrimaryGreen,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                    }
 
                     // Texto "o ingresa desde"
                     Text(
@@ -161,17 +222,10 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Iconos de Login Social (Facebook y Google)
+                    // Iconos de Login Social
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        /*IconButton(onClick = onFacebookLoginClick) {
-                            Image(
-                                painter = painterResource(id = R.drawable.ic_facebook_logo),
-                                contentDescription = "Facebook Login",
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }*/
                         IconButton(onClick = onGoogleLoginClick) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_google_logo),
@@ -185,6 +239,20 @@ fun LoginScreen(
             }
         }
     }
+
+    // Diálogo de error biométrico
+    if (showBiometricError) {
+        AlertDialog(
+            onDismissRequest = { showBiometricError = false },
+            title = { Text("Error de Autenticación") },
+            text = { Text(biometricErrorMessage) },
+            confirmButton = {
+                TextButton(onClick = { showBiometricError = false }) {
+                    Text("Aceptar")
+                }
+            }
+        )
+    }
 }
 
 @Preview(showBackground = true, device = "id:pixel_6")
@@ -192,11 +260,12 @@ fun LoginScreen(
 fun LoginScreenPreview() {
     FinperTheme {
         LoginScreen(
-            onLoginClick = { _, _ -> /* do nothing */ },
-            onRegisterClick = { /* do nothing */ },
-            onForgotPasswordClick = { /* do nothing */ },
-            onGoogleLoginClick = { /* do nothing */ },
-            //onFacebookLoginClick = { /* do nothing */ }
+            onLoginClick = { _, _ -> },
+            onRegisterClick = { },
+            onForgotPasswordClick = { },
+            onGoogleLoginClick = { },
+            onBiometricLoginSuccess = { }
         )
     }
 }
+

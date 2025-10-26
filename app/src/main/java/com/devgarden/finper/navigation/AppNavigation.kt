@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import com.devgarden.finper.R
 import com.devgarden.finper.ui.features.auth.AuthScreen
 import com.devgarden.finper.ui.features.auth.login.LoginScreen
+import com.devgarden.finper.ui.features.auth.security.BiometricLockScreen
+import com.devgarden.finper.ui.features.auth.security.BiometricViewModel
 import com.devgarden.finper.ui.features.launch.SplashScreen
 import com.devgarden.finper.ui.features.onboarding.OnboardingScreen
 import com.devgarden.finper.ui.features.auth.create_account.RegisterScreen
@@ -141,11 +143,24 @@ fun AppNavigation(userViewModel: UserViewModel) {
         startDestination = Screen.Splash.route
     ) {
         composable(Screen.Splash.route) {
+            val biometricViewModel: BiometricViewModel = viewModel()
+
+            // Inicializar el ViewModel biométrico
+            LaunchedEffect(Unit) {
+                biometricViewModel.initialize(context)
+            }
+
             SplashScreen(onTimeout = {
-                // Si ya hay sesión de Firebase, ir directamente a Home
+                val currentUser = firebaseAuth.currentUser
+
                 val target = when {
-                    firebaseAuth.currentUser != null -> Screen.Home.route
+                    // Si hay usuario autenticado y tiene huella activada, ir a bloqueo biométrico
+                    currentUser != null && biometricViewModel.biometricEnabled -> Screen.BiometricLock.route
+                    // Si hay usuario autenticado pero no tiene huella, ir directo a Home
+                    currentUser != null -> Screen.Home.route
+                    // Si no hay usuario, verificar onboarding
                     OnboardingPrefs.isOnboardingSeen(context) -> Screen.Auth.route
+                    // Si no ha visto onboarding, mostrarlo
                     else -> Screen.Onboarding.route
                 }
 
@@ -348,6 +363,25 @@ fun AppNavigation(userViewModel: UserViewModel) {
                     else -> Unit
                 }
             })
+        }
+
+        // Pantalla de bloqueo biométrico
+        composable(Screen.BiometricLock.route) {
+            BiometricLockScreen(
+                onAuthenticated = {
+                    // Navegar a Home tras autenticación exitosa
+                    navController.navigate(Screen.Home.route) {
+                        popUpTo(Screen.BiometricLock.route) { inclusive = true }
+                        launchSingleTop = true
+                    }
+                },
+                onUsernamePassword = {
+                    // Ir a login si el usuario prefiere usar contraseña
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.BiometricLock.route) { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }
