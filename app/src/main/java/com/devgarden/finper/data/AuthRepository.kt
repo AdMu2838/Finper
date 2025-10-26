@@ -184,9 +184,7 @@ class AuthRepository(
                 description = description ?: "",
                 createdAt = Date()
             )
-            // Guardar el ingreso fijo
             docRef.set(income).await()
-            // Incrementar balance del usuario de forma atómica
             firestore.collection("users").document(uid).update("balance", FieldValue.increment(amount)).await()
             Result.success(Unit)
         } catch (e: Exception) {
