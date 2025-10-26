@@ -40,71 +40,89 @@ class TransactionsViewModel : ViewModel() {
     private var listener: ListenerRegistration? = null
 
     init {
-        attachListenerIfUser()
+        // por defecto cargar todas las transacciones (sin rango)
+        listenTransactionsRange(null, null)
     }
 
-    private fun attachListenerIfUser() {
+    private fun attachQueryListener(query: Query) {
+        listener?.remove()
+        loading = true
+        error = null
+        listener = query.addSnapshotListener { snapshot, ex ->
+            if (ex != null) {
+                error = ex.localizedMessage
+                loading = false
+                return@addSnapshotListener
+            }
+
+            if (snapshot != null) {
+                transactions = snapshot.documents.mapNotNull { doc ->
+                    try {
+                        val id = doc.id
+                        val rawAmount = doc.get("amount")
+                        val amount = when (rawAmount) {
+                            is Number -> rawAmount.toDouble()
+                            is String -> rawAmount.toDoubleOrNull() ?: 0.0
+                            else -> 0.0
+                        }
+                        val category = doc.getString("category") ?: ""
+                        val timestamp = doc.get("date")
+                        val date: Date? = when (timestamp) {
+                            is Timestamp -> timestamp.toDate()
+                            is Date -> timestamp
+                            else -> null
+                        }
+                        val description = doc.getString("description") ?: ""
+                        val isExpense = doc.getBoolean("isExpense") ?: false
+
+                        TransactionDto(id = id, amount = amount, category = category, date = date, description = description, isExpense = isExpense)
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
+            } else {
+                transactions = emptyList()
+            }
+
+            loading = false
+        }
+    }
+
+    /**
+     * Suscribe a las transacciones en el rango [start, end] (ambos inclusive). Si start y end son null, escucha todas las transacciones.
+     */
+    fun listenTransactionsRange(start: Date?, end: Date?) {
         val user = auth.currentUser
         if (user == null) {
+            listener?.remove()
+            listener = null
             transactions = emptyList()
             loading = false
             error = "Usuario no autenticado"
             return
         }
 
-        loading = true
-        error = null
-
-        listener?.remove()
-        // Ordenar por fecha descendente para mostrar las transacciones más recientes primero
-        listener = db.collection("users")
-            .document(user.uid)
-            .collection("transactions")
-            .orderBy("date", Query.Direction.DESCENDING)
-            .addSnapshotListener { snapshot, ex ->
-                if (ex != null) {
-                    error = ex.localizedMessage
-                    loading = false
-                    return@addSnapshotListener
-                }
-
-                if (snapshot != null) {
-                    transactions = snapshot.documents.mapNotNull { doc ->
-                        try {
-                            val id = doc.id
-                            // amount puede venir como Number
-                            val rawAmount = doc.get("amount")
-                            val amount = when (rawAmount) {
-                                is Number -> rawAmount.toDouble()
-                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
-                                else -> 0.0
-                            }
-                            val category = doc.getString("category") ?: ""
-                            val timestamp = doc.get("date")
-                            val date: Date? = when (timestamp) {
-                                is Timestamp -> timestamp.toDate()
-                                is Date -> timestamp
-                                else -> null
-                            }
-                            val description = doc.getString("description") ?: ""
-                            val isExpense = doc.getBoolean("isExpense") ?: false
-
-                            TransactionDto(id = id, amount = amount, category = category, date = date, description = description, isExpense = isExpense)
-                        } catch (_: Exception) {
-                            null
-                        }
-                    }
-                } else {
-                    transactions = emptyList()
-                }
-
-                loading = false
+        try {
+            var query: Query = db.collection("users").document(user.uid).collection("transactions")
+            if (start != null) {
+                query = query.whereGreaterThanOrEqualTo("date", Timestamp(start))
             }
+            if (end != null) {
+                query = query.whereLessThanOrEqualTo("date", Timestamp(end))
+            }
+            // ordenar por fecha descendente
+            query = query.orderBy("date", Query.Direction.DESCENDING)
+
+            attachQueryListener(query)
+        } catch (ex: Exception) {
+            error = ex.localizedMessage
+            loading = false
+        }
     }
 
     @Suppress("unused")
     fun reload() {
-        attachListenerIfUser()
+        listenTransactionsRange(null, null)
     }
 
     /**

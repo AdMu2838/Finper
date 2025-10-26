@@ -65,70 +65,64 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
     val transactionsViewModel: TransactionsViewModel = viewModel()
     val dtoTransactions by remember { derivedStateOf { transactionsViewModel.transactions } }
 
-    // Mapear DTOs a modelo UI y filtrar por periodo
-    val mappedTransactions by remember(dtoTransactions, selectedPeriod) {
-        derivedStateOf {
-            // función para comprobar si una fecha está en el rango [start,end]
-            fun inRange(date: Date?, start: Date, end: Date): Boolean {
-                if (date == null) return false
-                return !date.before(start) && !date.after(end)
+    // Calcular el rango según selectedPeriod y suscribir la consulta en el ViewModel (filtrado en servidor)
+    LaunchedEffect(selectedPeriod) {
+        fun startOfDay(cal: Calendar) {
+            cal.set(Calendar.HOUR_OF_DAY, 0)
+            cal.set(Calendar.MINUTE, 0)
+            cal.set(Calendar.SECOND, 0)
+            cal.set(Calendar.MILLISECOND, 0)
+        }
+        fun endOfDay(cal: Calendar) {
+            cal.set(Calendar.HOUR_OF_DAY, 23)
+            cal.set(Calendar.MINUTE, 59)
+            cal.set(Calendar.SECOND, 59)
+            cal.set(Calendar.MILLISECOND, 999)
+        }
+
+        val now = Calendar.getInstance()
+        val (start: Date?, end: Date?) = when (selectedPeriod) {
+            0 -> { // Diario
+                val s = Calendar.getInstance().apply { startOfDay(this) }.time
+                val e = Calendar.getInstance().apply { endOfDay(this) }.time
+                Pair(s, e)
             }
-
-            // calcular rangos
-            val now = Calendar.getInstance()
-
-            // diario: inicio hoy 00:00:00, fin hoy 23:59:59.999
-            val startDay = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-            }.time
-            val endDay = Calendar.getInstance().apply {
-                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
-            }.time
-
-            // semanal: lunes 00:00 -> domingo 23:59
-            val calWeekStart = Calendar.getInstance().apply {
-                // establecer al inicio del día
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-                val dow = get(Calendar.DAY_OF_WEEK)
-                // Java Calendar: SUNDAY=1 ... SATURDAY=7. Queremos Monday as start
+            1 -> { // Semanal: lunes -> domingo
+                val cal = Calendar.getInstance().apply { startOfDay(this) }
+                val dow = cal.get(Calendar.DAY_OF_WEEK)
                 val diffToMonday = if (dow == Calendar.SUNDAY) -6 else Calendar.MONDAY - dow
-                add(Calendar.DAY_OF_MONTH, diffToMonday)
+                cal.add(Calendar.DAY_OF_MONTH, diffToMonday)
+                startOfDay(cal)
+                val s = cal.time
+                val eCal = Calendar.getInstance().apply { time = s; add(Calendar.DAY_OF_MONTH, 6) }
+                endOfDay(eCal)
+                Pair(s, eCal.time)
             }
-            val startWeek = calWeekStart.time
-            val endWeek = Calendar.getInstance().apply {
-                time = startWeek
-                add(Calendar.DAY_OF_MONTH, 6)
-                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
-            }.time
-
-            // mensual: primer dia 00:00 -> ultimo dia 23:59
-            val calMonthStart = Calendar.getInstance().apply {
-                set(Calendar.DAY_OF_MONTH, 1)
-                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            else -> { // Mensual: primer -> último día
+                val cal = Calendar.getInstance()
+                cal.set(Calendar.DAY_OF_MONTH, 1)
+                startOfDay(cal)
+                val s = cal.time
+                val eCal = Calendar.getInstance().apply { time = s }
+                eCal.set(Calendar.DAY_OF_MONTH, eCal.getActualMaximum(Calendar.DAY_OF_MONTH))
+                endOfDay(eCal)
+                Pair(s, eCal.time)
             }
-            val startMonth = calMonthStart.time
-            val endMonth = Calendar.getInstance().apply {
-                time = startMonth
-                set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
-                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
-            }.time
+        }
 
-            // Mapear y filtrar
-            val mapped = dtoTransactions.map { dto ->
+        // Llamar al ViewModel para que ejecute la consulta WITH the given range
+        transactionsViewModel.listenTransactionsRange(start, end)
+    }
+
+    // Mapear DTOs (ya filtradas por el servidor) a UI
+    val mappedTransactions by remember(dtoTransactions) {
+        derivedStateOf {
+            dtoTransactions.map { dto ->
                 val icon = if (dto.isExpense) Icons.Default.ShoppingBasket else Icons.Default.Payments
                 val amountStr = if (dto.isExpense) "-S/.${formatNumber(dto.amount)}" else "S/.${formatNumber(dto.amount)}"
                 val dateStr = formatDateForDisplay(dto.date)
                 val timeStr = formatTimeForDisplay(dto.date)
                 Transaction(icon = icon, title = dto.description.ifBlank { if (dto.isExpense) "Gasto" else "Ingreso" }, time = timeStr, date = dateStr, category = dto.category.ifBlank { "Otros" }, amount = amountStr, isExpense = dto.isExpense)
-            }
-
-            // En lugar de usar index, que puede desincronizarse, mapeamos a pares (dto, transaction) y filtramos por dto.date
-            val pairedMapping = dtoTransactions.mapIndexed { index, dto -> Pair(dto, mapped[index]) }
-
-            when (selectedPeriod) {
-                0 -> pairedMapping.filter { inRange(it.first.date, startDay, endDay) }.map { it.second }
-                1 -> pairedMapping.filter { inRange(it.first.date, startWeek, endWeek) }.map { it.second }
-                else -> pairedMapping.filter { inRange(it.first.date, startMonth, endMonth) }.map { it.second }
             }
         }
     }
