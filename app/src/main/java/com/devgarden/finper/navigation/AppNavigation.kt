@@ -319,7 +319,16 @@ fun AppNavigation(userViewModel: UserViewModel) {
 
         // Nueva pantalla: Transacciones (tercer botón)
         composable(Screen.Transactions.route) {
-            TransactionsScreen()
+            TransactionsScreen(onBottomItemSelected = { idx ->
+                when (idx) {
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> { /* estadisticas - actualmente no hay ruta específica */ }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    else -> Unit
+                }
+            })
         }
     }
 }

@@ -16,11 +16,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.devgarden.finper.ui.components.SummaryCard
+import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.FinperTheme
 
 // Model usado en esta pantalla (nombre específico para evitar colisiones con otros paquetes)
@@ -107,69 +107,91 @@ fun TransactionList(
 @Composable
 fun TransactionsScreen(
     modifier: Modifier = Modifier,
-    initialFilter: TransactionFilter = TransactionFilter.ALL
+    initialFilter: TransactionFilter = TransactionFilter.ALL,
+    selectedTabIndex: Int = 2,
+    onBottomItemSelected: (Int) -> Unit = {}
 ) {
     var selectedFilter by remember { mutableStateOf(initialFilter) }
 
-    Column(modifier = modifier.fillMaxSize().background(Color(0xFFF0F4F7))) {
-        // header
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFF00B984))
-            .padding(20.dp)) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("Transacciones", color = Color.White, fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier= Modifier
-                        .padding(top = 40.dp),)
-                Spacer(modifier = Modifier.height(12.dp))
-                SummaryCard(
-                    balanceLabel = "Balance Total",
-                    balanceValue = "S/.7,783.00",
-                    expenseLabel = "Gastos",
-                    expenseValue = "-S/.1,187.40",
-                    progress = 0.3f,
-                    progressLabel = ""
-                )
-            }
-        }
-
-        // controls area
+    Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier
-            .fillMaxWidth()
-            .padding(16.dp)) {
-            // small cards could be composed separately if needed
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Ingreso", fontWeight = FontWeight.SemiBold)
-                        Text("S/.4,120.00", fontWeight = FontWeight.Bold)
-                    }
-                }
-                Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("Gastos", fontWeight = FontWeight.SemiBold)
-                        Text("S/.1,187.40", fontWeight = FontWeight.Bold)
-                    }
+            .fillMaxSize()
+            .background(Color(0xFFF0F4F7))
+            .padding(bottom = 88.dp) // leave space for bottom bar
+        ) {
+            // header
+            Box(modifier = Modifier
+                .fillMaxWidth()
+                .background(Color(0xFF00B984))
+                .padding(20.dp)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Transacciones", color = Color.White, fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier= Modifier
+                            .padding(top = 40.dp),)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    SummaryCard(
+                        balanceLabel = "Balance Total",
+                        balanceValue = "S/.7,783.00",
+                        expenseLabel = "Gastos",
+                        expenseValue = "-S/.1,187.40",
+                        progress = 0.3f,
+                        progressLabel = ""
+                    )
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            // controls area
+            Column(modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)) {
+                // small cards could be composed separately if needed
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Ingreso", fontWeight = FontWeight.SemiBold)
+                            Text("S/.4,120.00", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Card(modifier = Modifier.weight(1f), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = Color.White)) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text("Gastos", fontWeight = FontWeight.SemiBold)
+                            Text("S/.1,187.40", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
 
-            // filtro reutilizable
-            TransactionFilterToggle(selected = selectedFilter, onSelected = { selectedFilter = it })
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // filtro reutilizable
+                TransactionFilterToggle(selected = selectedFilter, onSelected = { selectedFilter = it })
+            }
+
+            // list
+            val filtered = when (selectedFilter) {
+                TransactionFilter.ALL -> sampleTransactions
+                TransactionFilter.INCOME -> sampleTransactions.filter { !it.isExpense }
+                TransactionFilter.EXPENSE -> sampleTransactions.filter { it.isExpense }
+            }
+
+            TransactionList(modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 8.dp), transactions = filtered)
         }
 
-        // list
-        val filtered = when (selectedFilter) {
-            TransactionFilter.ALL -> sampleTransactions
-            TransactionFilter.INCOME -> sampleTransactions.filter { !it.isExpense }
-            TransactionFilter.EXPENSE -> sampleTransactions.filter { it.isExpense }
-        }
-
-        TransactionList(modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 16.dp, vertical = 8.dp), transactions = filtered)
+        // bottom bar fija
+        BottomBar(
+            modifier = Modifier.align(Alignment.BottomCenter),
+            items = listOf(
+                Icons.Default.Home,
+                Icons.Default.BarChart,
+                Icons.Default.SwapHoriz,
+                Icons.Default.AccountBalanceWallet,
+                Icons.Default.Person
+            ),
+            selectedIndex = selectedTabIndex,
+            onItemSelected = onBottomItemSelected
+        )
     }
 }
 
@@ -196,4 +218,3 @@ fun ExpensesPreview() {
         TransactionsScreen(initialFilter = TransactionFilter.EXPENSE)
     }
 }
-
