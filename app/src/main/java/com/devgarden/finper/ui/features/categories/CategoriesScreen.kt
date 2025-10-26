@@ -19,11 +19,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.TopRoundedHeader
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
+import com.devgarden.finper.ui.viewmodel.UserViewModel
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 
 data class Category(val icon: ImageVector, val label: String)
 
@@ -43,6 +47,10 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
         Category(Icons.Default.Add, "Mas")
     )
 
+    // Obtener balance desde ViewModel
+    val userViewModel: UserViewModel = viewModel()
+    val balanceStr = formatCurrency(userViewModel.balance)
+
     Box(modifier = Modifier
         .fillMaxSize()
         .background(Color(0xFFF0F4F7))) {
@@ -53,11 +61,11 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Summary card (reusable)
+            // Summary card (reusable) - ahora usando balance desde Firestore
             SummaryCard(
                 modifier = Modifier.padding(horizontal = 16.dp),
                 balanceLabel = "Total Balance",
-                balanceValue = "$7,783.00",
+                balanceValue = balanceStr,
                 expenseLabel = "Total Expense",
                 expenseValue = "-S/.1,187.40",
                 progress = 0.3f,
@@ -138,4 +146,14 @@ fun CategoriesScreenPreview() {
     FinperTheme {
         CategoriesScreen()
     }
+}
+
+// Helper local para formatear moneda con separador de miles
+private fun formatCurrency(amount: Double): String {
+    val symbols = DecimalFormatSymbols().apply {
+        groupingSeparator = ','
+        decimalSeparator = '.'
+    }
+    val df = DecimalFormat("#,##0.00", symbols)
+    return "S/.${df.format(amount)}"
 }

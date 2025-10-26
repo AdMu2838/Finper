@@ -23,10 +23,14 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.components.SummaryCard
+import com.devgarden.finper.ui.viewmodel.UserViewModel
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 
 
 // --- Data class to represent a transaction ---
@@ -102,6 +106,11 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
 
 @Composable
 fun HeaderSection() {
+    // Obtener balance desde UserViewModel
+    val userViewModel: UserViewModel = viewModel()
+    val balance = userViewModel.balance
+    val balanceStr = formatCurrency(balance)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -125,17 +134,27 @@ fun HeaderSection() {
         }
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Reusable summary card replaces the InfoCard + progress section
+        // Reusable summary card reemplazando InfoCard + progress section
         SummaryCard(
             modifier = Modifier.padding(bottom = 16.dp),
             balanceLabel = "Presupuesto Total",
-            balanceValue = "S/.7,783.00",
+            balanceValue = balanceStr,
             expenseLabel = "Gasto Del Mes",
             expenseValue = "-S/.1,187.40",
             progress = 0.3f,
             progressLabel = "30% De Tus Gastos, Se Ve Bien."
         )
     }
+}
+
+// Helper local para formatear moneda con separador de miles coma y decimal punto
+private fun formatCurrency(amount: Double): String {
+    val symbols = DecimalFormatSymbols().apply {
+        groupingSeparator = ','
+        decimalSeparator = '.'
+    }
+    val df = DecimalFormat("#,##0.00", symbols)
+    return "S/.${df.format(amount)}"
 }
 
 @Composable

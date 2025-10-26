@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import com.devgarden.finper.data.UsuarioActual
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.ListenerRegistration
 
 class UserViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
@@ -15,6 +16,12 @@ class UserViewModel : ViewModel() {
     var usuario by mutableStateOf<UsuarioActual?>(null)
         private set
 
+    // balance observable (por defecto 0.0)
+    var balance by mutableStateOf(0.0)
+        private set
+
+    private var userListener: ListenerRegistration? = null
+
     init {
         cargarUsuarioActual()
     }
@@ -22,41 +29,56 @@ class UserViewModel : ViewModel() {
     fun cargarUsuarioActual() {
         val user = auth.currentUser
         if (user != null) {
-            // Leer la colección 'users' (la que usa AuthRepository) y mapear campos
-            db.collection("users").document(user.uid)
-                .get()
-                .addOnSuccessListener { document ->
-                    if (document != null && document.exists()) {
-                        val nombre = document.getString("fullName") ?: user.displayName ?: "Usuario"
-                        val correo = document.getString("email") ?: user.email ?: ""
-                        val telefono = document.getString("phone") ?: ""
-                        usuario = UsuarioActual(
-                            uid = user.uid,
-                            nombre = nombre,
-                            correo = correo,
-                            telefono = telefono
-                        )
-                    } else {
-                        // Si no está en Firestore, usar lo de FirebaseAuth
-                        usuario = UsuarioActual(
-                            uid = user.uid,
-                            nombre = user.displayName ?: "Usuario",
-                            correo = user.email ?: "",
-                            telefono = ""
-                        )
-                    }
-                }
-                .addOnFailureListener {
-                    // En caso de error al leer Firestore, fallback a datos de auth
+            // Cancel previous listener if any
+            userListener?.remove()
+
+            // Escuchar cambios en el documento del usuario para mantener balance en tiempo real
+            val docRef = db.collection("users").document(user.uid)
+            userListener = docRef.addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    // En caso de error, fallback a datos de auth
                     usuario = UsuarioActual(
                         uid = user.uid,
                         nombre = user.displayName ?: "Usuario",
                         correo = user.email ?: "",
                         telefono = ""
                     )
+                    balance = balance.takeIf { it >= 0.0 } ?: 0.0
+                    return@addSnapshotListener
                 }
+
+                if (snapshot != null && snapshot.exists()) {
+                    val nombre = snapshot.getString("fullName") ?: user.displayName ?: "Usuario"
+                    val correo = snapshot.getString("email") ?: user.email ?: ""
+                    val telefono = snapshot.getString("phone") ?: ""
+                    val balanceField = try {
+                        val raw = snapshot.get("balance")
+                        if (raw is Number) raw.toDouble() else 0.0
+                    } catch (_: Exception) { 0.0 }
+
+                    usuario = UsuarioActual(
+                        uid = user.uid,
+                        nombre = nombre,
+                        correo = correo,
+                        telefono = telefono
+                    )
+                    balance = balanceField
+                } else {
+                    // Si no está en Firestore, usar lo de FirebaseAuth
+                    usuario = UsuarioActual(
+                        uid = user.uid,
+                        nombre = user.displayName ?: "Usuario",
+                        correo = user.email ?: "",
+                        telefono = ""
+                    )
+                    balance = 0.0
+                }
+            }
         } else {
             usuario = null
+            balance = 0.0
+            userListener?.remove()
+            userListener = null
         }
     }
 
@@ -88,5 +110,8 @@ class UserViewModel : ViewModel() {
     fun cerrarSesion() {
         auth.signOut()
         usuario = null
+        balance = 0.0
+        userListener?.remove()
+        userListener = null
     }
 }

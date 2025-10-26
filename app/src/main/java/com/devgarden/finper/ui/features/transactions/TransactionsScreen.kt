@@ -19,9 +19,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.FinperTheme
+import com.devgarden.finper.ui.viewmodel.UserViewModel
+import java.text.DecimalFormat
+import java.text.DecimalFormatSymbols
 
 // Model usado en esta pantalla (nombre específico para evitar colisiones con otros paquetes)
 data class TransactionModel(
@@ -113,6 +117,11 @@ fun TransactionsScreen(
 ) {
     var selectedFilter by remember { mutableStateOf(initialFilter) }
 
+    // Obtener balance desde ViewModel
+    val userViewModel: UserViewModel = viewModel()
+    val balance = userViewModel.balance
+    val balanceStr = formatCurrency(balance)
+
     Box(modifier = modifier.fillMaxSize()) {
         Column(modifier = Modifier
             .fillMaxSize()
@@ -132,7 +141,7 @@ fun TransactionsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
                     SummaryCard(
                         balanceLabel = "Balance Total",
-                        balanceValue = "S/.7,783.00",
+                        balanceValue = balanceStr,
                         expenseLabel = "Gastos",
                         expenseValue = "-S/.1,187.40",
                         progress = 0.3f,
@@ -193,6 +202,16 @@ fun TransactionsScreen(
             onItemSelected = onBottomItemSelected
         )
     }
+}
+
+// Helper local para formatear moneda con separador de miles coma y decimal punto
+private fun formatCurrency(amount: Double): String {
+    val symbols = DecimalFormatSymbols().apply {
+        groupingSeparator = ','
+        decimalSeparator = '.'
+    }
+    val df = DecimalFormat("#,##0.00", symbols)
+    return "S/.${df.format(amount)}"
 }
 
 @Preview(showBackground = true)
