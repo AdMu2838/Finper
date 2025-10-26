@@ -23,6 +23,7 @@ import com.devgarden.finper.ui.features.auth.login.LoginViewModel
 import com.devgarden.finper.ui.features.auth.login.LoginUiState
 import com.devgarden.finper.ui.features.home.HomeScreen
 import com.devgarden.finper.ui.features.profile.ProfileScreen
+import com.devgarden.finper.ui.features.profile.EditProfileScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -268,6 +269,15 @@ fun AppNavigation(userViewModel: UserViewModel) {
                 navController.navigate(Screen.Auth.route) {
                     popUpTo(Screen.Home.route) { inclusive = true }
                 }
+            }, onEditProfile = {
+                navController.navigate(Screen.EditProfile.route)
+            })
+        }
+
+        // Pantalla Edit Profile
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(userViewModel, onBack = {
+                navController.popBackStack()
             })
         }
     }

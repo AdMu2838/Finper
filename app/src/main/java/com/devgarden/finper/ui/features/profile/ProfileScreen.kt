@@ -25,18 +25,28 @@ import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.devgarden.finper.data.UsuarioActual
 
 @Composable
-fun ProfileScreen(userViewModel: UserViewModel, onBottomItemSelected: (Int) -> Unit = {}, onLogout: () -> Unit = {}) {
+fun ProfileScreen(
+    userViewModel: UserViewModel,
+    onBottomItemSelected: (Int) -> Unit = {},
+    onLogout: () -> Unit = {},
+    onEditProfile: () -> Unit = {}
+) {
     val usuario = userViewModel.usuario
     ProfileScreenContent(usuario = usuario, onBottomItemSelected = onBottomItemSelected, onLogout = {
         userViewModel.cerrarSesion()
         onLogout()
-    })
+    }, onEditProfile = onEditProfile)
 }
 
 @Composable
-private fun ProfileScreenContent(usuario: UsuarioActual?, onBottomItemSelected: (Int) -> Unit = {}, onLogout: () -> Unit = {}) {
+private fun ProfileScreenContent(
+    usuario: UsuarioActual?,
+    onBottomItemSelected: (Int) -> Unit = {},
+    onLogout: () -> Unit = {},
+    onEditProfile: () -> Unit = {}
+) {
     var bottomSelected by remember { mutableIntStateOf(4) } // perfil seleccionado
-    val effectiveName = usuario?.fullName ?: usuario?.email?.substringBefore("@") ?: "Usuario"
+    val effectiveName = usuario?.nombre ?: usuario?.correo?.substringBefore("@") ?: "Usuario"
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -116,13 +126,13 @@ private fun ProfileScreenContent(usuario: UsuarioActual?, onBottomItemSelected: 
             ) {
                 Text(text = effectiveName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15323B))
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "ID: 25030024", fontSize = 12.sp, color = Color.Gray)
+                Text(text = "ID: ${usuario?.uid ?: "-"}", fontSize = 12.sp, color = Color.Gray)
 
                 Spacer(modifier = Modifier.height(18.dp))
 
                 // Lista de opciones
                 Column(modifier = Modifier.fillMaxWidth()) {
-                    ProfileMenuItem(icon = Icons.Default.Edit, label = "Editar Perfil")
+                    ProfileMenuItem(icon = Icons.Default.Edit, label = "Editar Perfil") { onEditProfile() }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileMenuItem(icon = Icons.Default.Security, label = "Seguridad")
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
@@ -188,6 +198,6 @@ private fun ProfileMenuItem(icon: ImageVector, label: String, tint: Color = Colo
 fun ProfileScreenPreview() {
     FinperTheme {
         // Preview con datos simulados
-        ProfileScreenContent(usuario = UsuarioActual(uid = "1", fullName = "Preview User", email = "preview@example.com"))
+        ProfileScreenContent(usuario = UsuarioActual(uid = "1", nombre = "Preview User", correo = "preview@example.com"))
     }
 }

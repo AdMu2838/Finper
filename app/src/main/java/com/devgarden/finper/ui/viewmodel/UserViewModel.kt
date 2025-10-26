@@ -29,17 +29,20 @@ class UserViewModel : ViewModel() {
                     if (document != null && document.exists()) {
                         val nombre = document.getString("fullName") ?: user.displayName ?: "Usuario"
                         val correo = document.getString("email") ?: user.email ?: ""
+                        val telefono = document.getString("phone") ?: ""
                         usuario = UsuarioActual(
                             uid = user.uid,
-                            fullName = nombre,
-                            email = correo
+                            nombre = nombre,
+                            correo = correo,
+                            telefono = telefono
                         )
                     } else {
                         // Si no está en Firestore, usar lo de FirebaseAuth
                         usuario = UsuarioActual(
                             uid = user.uid,
-                            fullName = user.displayName ?: "Usuario",
-                            email = user.email ?: ""
+                            nombre = user.displayName ?: "Usuario",
+                            correo = user.email ?: "",
+                            telefono = ""
                         )
                     }
                 }
@@ -47,13 +50,39 @@ class UserViewModel : ViewModel() {
                     // En caso de error al leer Firestore, fallback a datos de auth
                     usuario = UsuarioActual(
                         uid = user.uid,
-                        fullName = user.displayName ?: "Usuario",
-                        email = user.email ?: ""
+                        nombre = user.displayName ?: "Usuario",
+                        correo = user.email ?: "",
+                        telefono = ""
                     )
                 }
         } else {
             usuario = null
         }
+    }
+
+    fun actualizarPerfil(nombre: String, telefono: String, correo: String, callback: (Boolean, String?) -> Unit) {
+        val user = auth.currentUser
+        if (user == null) {
+            callback(false, "Usuario no autenticado")
+            return
+        }
+
+        val data = hashMapOf<String, Any>(
+            "fullName" to nombre,
+            "email" to correo,
+            "phone" to telefono
+        )
+
+        db.collection("users").document(user.uid)
+            .set(data)
+            .addOnSuccessListener {
+                // Actualizar estado local
+                usuario = UsuarioActual(uid = user.uid, nombre = nombre, correo = correo, telefono = telefono)
+                callback(true, null)
+            }
+            .addOnFailureListener { ex ->
+                callback(false, ex.localizedMessage)
+            }
     }
 
     fun cerrarSesion() {
