@@ -14,7 +14,7 @@ object FormatUtils {
     // --- Constantes de Formato ---
     private const val CURRENCY_SYMBOL = "S/."
     private const val CURRENCY_PATTERN = "#,##0.00"
-    private const val DATE_PATTERN_DISPLAY = "d 'de' MMMM yyyy"
+    private const val DATE_PATTERN_DISPLAY = "d MMM"
     private const val TIME_PATTERN_DISPLAY = "h:mm a"
     private const val DATE_SHORT_PATTERN = "dd/MM/yyyy"
     private const val LOCALE_LANGUAGE = "es"
@@ -113,4 +113,3 @@ object FormatUtils {
         return value.toDoubleOrNull() ?: defaultValue
     }
 }
-

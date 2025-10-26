@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.BottomBar
+import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.viewmodel.CategoriesViewModel
 import com.devgarden.finper.ui.viewmodel.TransactionsViewModel
 import com.devgarden.finper.ui.viewmodel.UserViewModel
@@ -64,17 +65,29 @@ fun TransactionFilterToggle(
         FilterChip(
             selected = selected == TransactionFilter.ALL,
             onClick = { onSelected(TransactionFilter.ALL) },
-            label = { Text("Todas") }
+            label = { Text("Todas", color = Color.Black) },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = Color(0xFFE0E0E0),
+                selectedLabelColor = Color.Black
+            )
         )
         FilterChip(
             selected = selected == TransactionFilter.INCOME,
             onClick = { onSelected(TransactionFilter.INCOME) },
-            label = { Text("Ingresos") }
+            label = { Text("Ingresos", color = Color.Black) },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = Color(0xFFE0E0E0),
+                selectedLabelColor = Color.Black
+            )
         )
         FilterChip(
             selected = selected == TransactionFilter.EXPENSE,
             onClick = { onSelected(TransactionFilter.EXPENSE) },
-            label = { Text("Gastos") }
+            label = { Text("Gastos", color = Color.Black) },
+            colors = FilterChipDefaults.filterChipColors(
+                selectedContainerColor = Color(0xFFE0E0E0),
+                selectedLabelColor = Color.Black
+            )
         )
     }
 }
@@ -105,7 +118,7 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Black)
                 Text("${item.time} • ${item.date}", color = Color.Gray, fontSize = 12.sp)
             }
 
@@ -113,7 +126,7 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
                 Text(
                     item.amount,
                     fontWeight = FontWeight.Bold,
-                    color = if (item.isExpense) Color(0xFF2D3748) else Color(0xFF00B974)
+                    color = if (item.isExpense) Color.Red else PrimaryGreen
                 )
                 Text(item.category, color = Color.Gray, fontSize = 12.sp)
             }
@@ -250,7 +263,7 @@ private fun ControlsSection(
 
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Ingreso", fontWeight = FontWeight.SemiBold, color = Color.Black)
-                    Text(incomeStr, fontWeight = FontWeight.Bold)
+                    Text(incomeStr, fontWeight = FontWeight.Bold, color = PrimaryGreen)
                 }
             }
 
@@ -266,7 +279,7 @@ private fun ControlsSection(
 
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Gastos", fontWeight = FontWeight.SemiBold, color = Color.Black)
-                    Text(expenseStr, fontWeight = FontWeight.Bold)
+                    Text(expenseStr, fontWeight = FontWeight.Bold, color = Color.Red)
                 }
             }
         }

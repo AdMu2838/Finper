@@ -189,7 +189,7 @@ fun TransactionListItem(
                     ComponentDefaults.EXPENSE_BACKGROUND_COLOR
                 else
                     ComponentDefaults.INCOME_BACKGROUND_COLOR,
-                iconTint = if (isExpense) Color(0xFFD32F2F) else Color(0xFF4285F4)
+                iconTint = if (isExpense) Color.Red else Color(0xFF4285F4)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -218,7 +218,7 @@ fun TransactionListItem(
                 Text(
                     text = amount,
                     fontWeight = FontWeight.Bold,
-                    color = if (isExpense) Color(0xFF2D3748) else Color(0xFF00B974),
+                    color = if (isExpense) Color.Red else Color(0xFF00B974),
                     fontSize = 14.sp
                 )
                 Text(
