@@ -140,10 +140,10 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                 modifier = Modifier.padding(horizontal = 16.dp),
                 contentPadding = PaddingValues(bottom = 80.dp) // Padding for the bottom nav bar
             ) {
-                item {
+                /*item {
                     // --- Savings Goals Card ---
                     SavingsGoalsCard(modifier = Modifier.padding(top = 16.dp, bottom = 16.dp))
-                }
+                }*/
                 item {
                     // --- Time Period Toggle (controlado) ---
                     TimePeriodToggle(selectedIndex = selectedPeriod, onSelected = { selectedPeriod = it }, modifier = Modifier.padding(bottom = 16.dp))
@@ -242,7 +242,7 @@ fun HeaderSection() {
             expenseLabel = "Gasto Del Mes",
             expenseValue = expenseStr,
             //progress = 0.3f,
-            progressLabel = "30% De Tus Gastos, Se Ve Bien."
+            progressLabel = ""
         )
     }
 }

@@ -63,7 +63,7 @@ fun AnalysisScreen(
             val now = Date()
             val range = when (debouncedSelected) {
                 0 -> periodDayRange(now)
-                1 -> periodWeekRange(now)
+                1 -> periodMonthRange(now) // <-- cargar TODO el mes para agrupar por semanas
                 3 -> periodYearRange(now)
                 else -> periodMonthRange(now)
             }
@@ -156,7 +156,6 @@ fun AnalysisScreen(
                     BarChart(data = groupedData)
 
                     Spacer(modifier = Modifier.height(16.dp))
-
                 }
             }
 
@@ -194,11 +193,11 @@ private fun BarChart(data: List<Pair<String, Double>>, modifier: Modifier = Modi
                 data.forEach { (label, value) ->
                     val heightFraction = if (overallMax <= 0.0) 0.0 else (kotlin.math.abs(value) / overallMax)
                     Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally) {
-                        // Bar
+                        // Bar: azul para ingresos (positivo), rojo para gastos (negativo)
                         Box(modifier = Modifier
                             .height((heightFraction * 160).dp) // escalar a 160dp máximo
                             .width(18.dp)
-                            .background(if (value >= 0) Color(0xFF00B974) else Color(0xFF0B6EFF)))
+                            .background(if (value >= 0) Color(0xFF0B6EFF) else Color(0xFFD32F2F)))
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(text = label, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
                     }
@@ -260,26 +259,47 @@ private fun groupTransactionsForPeriod(transactions: List<TransactionsViewModel.
             }
             return labels.zip(sums)
         }
-        1 -> { // Semanal -> últimas 6 semanas
+        1 -> { // Semanal -> semanas del mes actual (semanas que cubren el mes)
             val labels = mutableListOf<String>()
             val sums = mutableListOf<Double>()
-            val cal = Calendar.getInstance()
-            // empezar 5 semanas atrás (7*5 days)
-            cal.add(Calendar.WEEK_OF_YEAR, -5)
-            for (i in 0..5) {
-                val weekStart = cal.clone() as Calendar
-                weekStart.set(Calendar.DAY_OF_WEEK, weekStart.firstDayOfWeek)
-                weekStart.set(Calendar.HOUR_OF_DAY, 0); weekStart.set(Calendar.MINUTE, 0); weekStart.set(Calendar.SECOND, 0); weekStart.set(Calendar.MILLISECOND, 0)
+
+            // Determinar primer día del mes y último día
+            val monthStart = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val monthEnd = monthStart.clone() as Calendar
+            monthEnd.set(Calendar.DAY_OF_MONTH, monthEnd.getActualMaximum(Calendar.DAY_OF_MONTH))
+            monthEnd.set(Calendar.HOUR_OF_DAY, 23); monthEnd.set(Calendar.MINUTE, 59); monthEnd.set(Calendar.SECOND, 59); monthEnd.set(Calendar.MILLISECOND, 999)
+
+            // Encontrar inicio de la primera semana (lunes) que incluye el 1ro del mes
+            val firstWeekStart = monthStart.clone() as Calendar
+            firstWeekStart.firstDayOfWeek = Calendar.MONDAY
+            firstWeekStart.set(Calendar.DAY_OF_WEEK, firstWeekStart.firstDayOfWeek)
+            if (firstWeekStart.time.after(monthStart.time)) {
+                firstWeekStart.add(Calendar.DAY_OF_YEAR, -7)
+            }
+
+            // Iterar semana por semana hasta cubrir el último día del mes
+            val weekStart = firstWeekStart.clone() as Calendar
+            var idx = 1
+            while (!weekStart.time.after(monthEnd.time)) {
                 val start = weekStart.time
                 val weekEnd = weekStart.clone() as Calendar
                 weekEnd.add(Calendar.DAY_OF_MONTH, 6)
                 weekEnd.set(Calendar.HOUR_OF_DAY, 23); weekEnd.set(Calendar.MINUTE, 59); weekEnd.set(Calendar.SECOND, 59); weekEnd.set(Calendar.MILLISECOND, 999)
                 val end = weekEnd.time
+
+                // Sumar transacciones que caen en este rango (dentro del mes)
                 val sum = transactions.filter { it.date != null && it.date in start..end }.sumOf { it.amount * if (it.isExpense) -1 else 1 }
-                labels.add("S${i + 1}")
+                labels.add("S$idx")
                 sums.add(sum)
-                cal.add(Calendar.WEEK_OF_YEAR, 1)
+
+                // siguiente semana
+                weekStart.add(Calendar.WEEK_OF_YEAR, 1)
+                idx++
             }
+
             return labels.zip(sums)
         }
         2 -> { // Mensual -> meses del año (Ene..Dic), sumar por mes del año actual
@@ -355,25 +375,6 @@ private fun periodDayRange(now: Date): Pair<Date, Date> {
     cal.set(Calendar.SECOND, 0)
     cal.set(Calendar.MILLISECOND, 0)
     val start = cal.time
-    cal.set(Calendar.HOUR_OF_DAY, 23)
-    cal.set(Calendar.MINUTE, 59)
-    cal.set(Calendar.SECOND, 59)
-    cal.set(Calendar.MILLISECOND, 999)
-    val end = cal.time
-    return Pair(start, end)
-}
-
-private fun periodWeekRange(now: Date): Pair<Date, Date> {
-    val cal = Calendar.getInstance()
-    cal.time = now
-    cal.firstDayOfWeek = Calendar.MONDAY
-    cal.set(Calendar.DAY_OF_WEEK, cal.firstDayOfWeek)
-    cal.set(Calendar.HOUR_OF_DAY, 0)
-    cal.set(Calendar.MINUTE, 0)
-    cal.set(Calendar.SECOND, 0)
-    cal.set(Calendar.MILLISECOND, 0)
-    val start = cal.time
-    cal.add(Calendar.DAY_OF_WEEK, 6)
     cal.set(Calendar.HOUR_OF_DAY, 23)
     cal.set(Calendar.MINUTE, 59)
     cal.set(Calendar.SECOND, 59)
