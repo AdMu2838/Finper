@@ -27,6 +27,7 @@ import com.devgarden.finper.ui.features.profile.EditProfileScreen
 import com.devgarden.finper.ui.features.profile.SecurityScreen
 import com.devgarden.finper.ui.features.categories.CategoriesScreen
 import com.devgarden.finper.ui.features.transactions.TransactionsScreen
+import com.devgarden.finper.ui.features.analysis.AnalysisScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -254,6 +255,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
                 when (index) {
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
@@ -266,6 +268,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
             ProfileScreen(userViewModel, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
@@ -296,9 +299,10 @@ fun AppNavigation(userViewModel: UserViewModel) {
             SecurityScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
-                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
                 }
             })
@@ -309,9 +313,10 @@ fun AppNavigation(userViewModel: UserViewModel) {
             CategoriesScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
-                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
                 }
             })
@@ -322,7 +327,21 @@ fun AppNavigation(userViewModel: UserViewModel) {
             TransactionsScreen(onBottomItemSelected = { idx ->
                 when (idx) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
-                    1 -> { /* estadisticas - actualmente no hay ruta específica */ }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    else -> Unit
+                }
+            })
+        }
+
+        // Pantalla Analysis (nuevo, índice 1)
+        composable(Screen.Analysis.route) {
+            AnalysisScreen(onBack = { navController.popBackStack() }, selectedIndex = 1, onBottomItemSelected = { idx ->
+                when (idx) {
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
                     2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
