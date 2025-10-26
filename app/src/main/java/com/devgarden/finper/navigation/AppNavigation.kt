@@ -26,6 +26,7 @@ import com.devgarden.finper.ui.features.profile.ProfileScreen
 import com.devgarden.finper.ui.features.profile.EditProfileScreen
 import com.devgarden.finper.ui.features.profile.SecurityScreen
 import com.devgarden.finper.ui.features.categories.CategoriesScreen
+import com.devgarden.finper.ui.features.transactions.TransactionsScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -254,6 +255,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
                 }
             })
@@ -266,6 +268,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
                 }
             }, onLogout = {
@@ -295,6 +298,7 @@ fun AppNavigation(userViewModel: UserViewModel) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
                 }
             })
@@ -307,9 +311,15 @@ fun AppNavigation(userViewModel: UserViewModel) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
                     4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
                     else -> Unit
                 }
             })
+        }
+
+        // Nueva pantalla: Transacciones (tercer botón)
+        composable(Screen.Transactions.route) {
+            TransactionsScreen()
         }
     }
 }
