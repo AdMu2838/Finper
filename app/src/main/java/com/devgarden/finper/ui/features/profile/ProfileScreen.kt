@@ -18,6 +18,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.zIndex
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
@@ -46,7 +47,11 @@ private fun ProfileScreenContent(
     onEditProfile: () -> Unit = {}
 ) {
     var bottomSelected by remember { mutableIntStateOf(4) } // perfil seleccionado
-    val effectiveName = usuario?.nombre ?: usuario?.correo?.substringBefore("@") ?: "Usuario"
+    val effectiveName = when {
+        !usuario?.nombre.isNullOrBlank() -> usuario!!.nombre
+        !usuario?.correo.isNullOrBlank() -> usuario!!.correo.substringBefore("@")
+        else -> "Usuario"
+    }
 
     Box(modifier = Modifier
         .fillMaxSize()
@@ -56,7 +61,7 @@ private fun ProfileScreenContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(180.dp)
                 .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
                 .background(PrimaryGreen)
         ) {
@@ -83,38 +88,13 @@ private fun ProfileScreenContent(
                     Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.White)
                 }
             }
-
-            // Avatar superpuesto
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 40.dp),
-                contentAlignment = Alignment.TopCenter
-            ) {
-                Surface(
-                    modifier = Modifier
-                        .size(110.dp)
-                        .clip(CircleShape),
-                    color = Color.White
-                ) {
-                    // Placeholder avatar: icon centrado
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Default.Person,
-                            contentDescription = "Avatar",
-                            tint = Color.Gray,
-                            modifier = Modifier.size(56.dp)
-                        )
-                    }
-                }
-            }
         }
 
-        // Card principal debajo del avatar
+        // Card principal (ajustado top padding para dejar sitio al avatar)
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 140.dp, start = 16.dp, end = 16.dp, bottom = 80.dp),
+                .padding(top = 150.dp, start = 16.dp, end = 16.dp, bottom = 80.dp),
             shape = RoundedCornerShape(24.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFF5FFF9)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
@@ -143,6 +123,32 @@ private fun ProfileScreenContent(
                     ProfileMenuItem(icon = Icons.Default.ExitToApp, label = "Cerrar Sesión", tint = Color(0xFFD32F2F)) {
                         onLogout()
                     }
+                }
+            }
+        }
+
+        // Avatar superpuesto (dibujado después del Card para quedar encima)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = 80.dp)
+                .zIndex(0.75f),
+            contentAlignment = Alignment.TopCenter
+        ) {
+            Surface(
+                modifier = Modifier
+                    .size(120.dp)
+                    .clip(CircleShape),
+                color = Color.White
+            ) {
+                // Placeholder avatar: icon centrado
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = "Avatar",
+                        tint = Color.Gray,
+                        modifier = Modifier.size(56.dp)
+                    )
                 }
             }
         }

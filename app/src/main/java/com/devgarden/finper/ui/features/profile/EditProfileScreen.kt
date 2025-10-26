@@ -56,7 +56,7 @@ fun EditProfileContent(usuario: UsuarioActual?, onBack: () -> Unit = {}, onSave:
         .padding(16.dp)) {
 
         TopAppBar(
-            title = { Text(text = "Edit My Profile", fontSize = 18.sp) },
+            title = { Text(text = "Editar mi Perfil", fontSize = 18.sp) },
             navigationIcon = {
                 IconButton(onClick = { onBack() }) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
@@ -92,12 +92,14 @@ fun EditProfileContent(usuario: UsuarioActual?, onBack: () -> Unit = {}, onSave:
 
                 Spacer(modifier = Modifier.height(8.dp))
 
+                // Correo: campo no editable
                 OutlinedTextField(
                     value = correo,
-                    onValueChange = { correo = it },
+                    onValueChange = { /* no-op: campo no editable */ },
                     label = { Text("Correo Electrónico") },
                     modifier = Modifier.fillMaxWidth(),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                    enabled = false,
+                    readOnly = true
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
