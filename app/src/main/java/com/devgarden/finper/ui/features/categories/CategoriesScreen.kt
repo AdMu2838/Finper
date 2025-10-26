@@ -25,6 +25,7 @@ import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.TopRoundedHeader
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.viewmodel.UserViewModel
+import com.devgarden.finper.ui.viewmodel.TransactionsViewModel
 import com.devgarden.finper.utils.FormatUtils
 import com.devgarden.finper.utils.Constants
 
@@ -56,8 +57,19 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
         Category(Icons.Default.Add, "Otros")
     )
 
+    // Obtener balance desde UserViewModel
     val userViewModel: UserViewModel = viewModel()
     val balanceStr = FormatUtils.formatCurrency(userViewModel.balance)
+
+    // Obtener gastos del mes actual desde TransactionsViewModel
+    val transactionsViewModel: TransactionsViewModel = viewModel()
+    val monthlyExpenses = transactionsViewModel.monthlyExpenses
+    val monthlyLoading = transactionsViewModel.monthlyLoading
+    val expenseStr = if (monthlyLoading) {
+        "-S/.--"
+    } else {
+        FormatUtils.formatExpense(monthlyExpenses)
+    }
 
     Box(
         modifier = Modifier
@@ -76,7 +88,7 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
                 balanceLabel = "Total Balance",
                 balanceValue = balanceStr,
                 expenseLabel = "Total Expense",
-                expenseValue = "-S/.1,187.40",
+                expenseValue = expenseStr,
                 //progress = 0.3f,
                 progressLabel = ""
             )

@@ -51,6 +51,18 @@ class TransactionsViewModel : ViewModel() {
     var monthlyError by mutableStateOf<String?>(null)
         private set
 
+    // --- Estados para ingresos del mes ---
+    var monthlyIncomes by mutableStateOf(0.0)
+        private set
+
+    var monthlyIncomesLoading by mutableStateOf(false)
+        private set
+
+    var monthlyIncomesError by mutableStateOf<String?>(null)
+        private set
+
+    private var monthlyIncomesListener: ListenerRegistration? = null
+
     // --- Estados y métodos para consulta por categoría (server-side ordering) ---
     var categoryTransactions by mutableStateOf<List<TransactionDto>>(emptyList())
         private set
@@ -184,6 +196,8 @@ class TransactionsViewModel : ViewModel() {
         listenTransactionsRange(null, null)
         // también empezar a escuchar los gastos del mes actual
         listenCurrentMonthExpenses()
+        // escuchar los ingresos del mes actual
+        listenCurrentMonthIncomes()
     }
 
     private fun attachQueryListener(query: Query) {
@@ -319,6 +333,70 @@ class TransactionsViewModel : ViewModel() {
     }
 
     /**
+     * Escucha en tiempo real la suma de ingresos (isExpense == false) desde el primer día hasta el último día del mes actual.
+     */
+    fun listenCurrentMonthIncomes() {
+        val user = auth.currentUser
+        if (user == null) {
+            monthlyIncomesListener?.remove()
+            monthlyIncomesListener = null
+            monthlyIncomes = 0.0
+            monthlyIncomesLoading = false
+            monthlyIncomesError = "Usuario no autenticado"
+            return
+        }
+
+        monthlyIncomesListener?.remove()
+        monthlyIncomesLoading = true
+        monthlyIncomesError = null
+
+        try {
+            val start = startOfMonth()
+            val end = endOfMonth()
+
+            var query: Query = db.collection("users").document(user.uid).collection("transactions")
+                .whereGreaterThanOrEqualTo("date", Timestamp(start))
+                .whereLessThanOrEqualTo("date", Timestamp(end))
+                .whereEqualTo("isExpense", false)
+
+            query = query.orderBy("date", Query.Direction.DESCENDING)
+
+            monthlyIncomesListener = query.addSnapshotListener { snapshot, ex ->
+                if (ex != null) {
+                    monthlyIncomesError = ex.localizedMessage
+                    monthlyIncomesLoading = false
+                    return@addSnapshotListener
+                }
+
+                if (snapshot != null) {
+                    var sum = 0.0
+                    for (doc in snapshot.documents) {
+                        try {
+                            val rawAmount = doc.get("amount")
+                            val amount = when (rawAmount) {
+                                is Number -> rawAmount.toDouble()
+                                is String -> rawAmount.toDoubleOrNull() ?: 0.0
+                                else -> 0.0
+                            }
+                            sum += amount
+                        } catch (_: Exception) {
+                            // ignorar doc mal formado
+                        }
+                    }
+                    monthlyIncomes = sum
+                } else {
+                    monthlyIncomes = 0.0
+                }
+
+                monthlyIncomesLoading = false
+            }
+        } catch (ex: Exception) {
+            monthlyIncomesError = ex.localizedMessage
+            monthlyIncomesLoading = false
+        }
+    }
+
+    /**
      * Consulta puntual que calcula la suma de gastos del mes actual una sola vez y devuelve el resultado por callback.
      */
     @Suppress("unused")
@@ -449,5 +527,7 @@ class TransactionsViewModel : ViewModel() {
         listener = null
         monthlyListener?.remove()
         monthlyListener = null
+        monthlyIncomesListener?.remove()
+        monthlyIncomesListener = null
     }
 }

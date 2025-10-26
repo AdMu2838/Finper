@@ -243,9 +243,14 @@ private fun ControlsSection(
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = Color.White)
             ) {
+                val transactionsViewModel: TransactionsViewModel = viewModel()
+                val monthlyIncomes = transactionsViewModel.monthlyIncomes
+                val monthlyIncomesLoading = transactionsViewModel.monthlyIncomesLoading
+                val incomeStr = if (monthlyIncomesLoading) "S/.--" else FormatUtils.formatCurrency(monthlyIncomes)
+
                 Column(modifier = Modifier.padding(12.dp)) {
                     Text("Ingreso", fontWeight = FontWeight.SemiBold)
-                    Text("S/.4,120.00", fontWeight = FontWeight.Bold)
+                    Text(incomeStr, fontWeight = FontWeight.Bold)
                 }
             }
 
