@@ -30,13 +30,14 @@ fun ProfileScreen(
     userViewModel: UserViewModel,
     onBottomItemSelected: (Int) -> Unit = {},
     onLogout: () -> Unit = {},
-    onEditProfile: () -> Unit = {}
+    onEditProfile: () -> Unit = {},
+    onSecurity: () -> Unit = {} // nuevo callback para navegar a Seguridad
 ) {
     val usuario = userViewModel.usuario
     ProfileScreenContent(usuario = usuario, onBottomItemSelected = onBottomItemSelected, onLogout = {
         userViewModel.cerrarSesion()
         onLogout()
-    }, onEditProfile = onEditProfile)
+    }, onEditProfile = onEditProfile, onSecurity = onSecurity)
 }
 
 @Composable
@@ -44,12 +45,13 @@ private fun ProfileScreenContent(
     usuario: UsuarioActual?,
     onBottomItemSelected: (Int) -> Unit = {},
     onLogout: () -> Unit = {},
-    onEditProfile: () -> Unit = {}
+    onEditProfile: () -> Unit = {},
+    onSecurity: () -> Unit = {} // propagar callback
 ) {
     var bottomSelected by remember { mutableIntStateOf(4) } // perfil seleccionado
     val effectiveName = when {
-        !usuario?.nombre.isNullOrBlank() -> usuario!!.nombre
-        !usuario?.correo.isNullOrBlank() -> usuario!!.correo.substringBefore("@")
+        !usuario?.nombre.isNullOrBlank() -> usuario.nombre
+        !usuario?.correo.isNullOrBlank() -> usuario.correo.substringBefore("@")
         else -> "Usuario"
     }
 
@@ -110,7 +112,7 @@ private fun ProfileScreenContent(
                 Column(modifier = Modifier.fillMaxWidth()) {
                     ProfileMenuItem(icon = Icons.Default.Edit, label = "Editar Perfil") { onEditProfile() }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    ProfileMenuItem(icon = Icons.Default.Security, label = "Seguridad")
+                    ProfileMenuItem(icon = Icons.Default.Security, label = "Seguridad") { onSecurity() }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileMenuItem(icon = Icons.Default.Settings, label = "Ajustes")
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))

@@ -24,6 +24,7 @@ import com.devgarden.finper.ui.features.auth.login.LoginUiState
 import com.devgarden.finper.ui.features.home.HomeScreen
 import com.devgarden.finper.ui.features.profile.ProfileScreen
 import com.devgarden.finper.ui.features.profile.EditProfileScreen
+import com.devgarden.finper.ui.features.profile.SecurityScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -271,6 +272,9 @@ fun AppNavigation(userViewModel: UserViewModel) {
                 }
             }, onEditProfile = {
                 navController.navigate(Screen.EditProfile.route)
+            }, onSecurity = {
+                // Navegar a la pantalla de seguridad
+                navController.navigate(Screen.Security.route)
             })
         }
 
@@ -278,6 +282,17 @@ fun AppNavigation(userViewModel: UserViewModel) {
         composable(Screen.EditProfile.route) {
             EditProfileScreen(userViewModel, onBack = {
                 navController.popBackStack()
+            })
+        }
+
+        // Pantalla Security
+        composable(Screen.Security.route) {
+            SecurityScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
+                when (index) {
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    else -> Unit
+                }
             })
         }
     }
