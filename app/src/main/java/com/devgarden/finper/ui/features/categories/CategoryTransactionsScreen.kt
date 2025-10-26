@@ -9,9 +9,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Layers
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Restaurant
 import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -24,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.devgarden.finper.ui.components.SummaryCard
+import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.viewmodel.TransactionsViewModel
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import java.text.DecimalFormat
@@ -42,6 +48,8 @@ private sealed class ListNode {
 fun CategoryTransactionsScreen(
     category: String,
     onBack: () -> Unit,
+    selectedIndex: Int = 3,
+    onBottomItemSelected: (Int) -> Unit = {},
     vm: TransactionsViewModel = viewModel()
 ) {
     val context = LocalContext.current
@@ -123,7 +131,7 @@ fun CategoryTransactionsScreen(
                     balanceValue = formatCurrency(userVM.balance),
                     expenseLabel = "Total Expense",
                     expenseValue = if (vm.monthlyLoading) "-S/.--" else "-${formatCurrency(vm.monthlyExpenses)}",
-                    progressLabel = "30% Of Your Expenses"
+                    progressLabel = ""
                 )
             }
 
@@ -131,7 +139,8 @@ fun CategoryTransactionsScreen(
 
             // White rounded content area
             Box(modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .weight(1f)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                 .background(Color.White)
             ) {
@@ -196,6 +205,16 @@ fun CategoryTransactionsScreen(
                     }
                 }
             }
+
+            // Bottom navigation bar (usar BottomBar existente) — recibir navegación vía callback
+            BottomBar(
+                modifier = Modifier.fillMaxWidth(),
+                items = listOf(Icons.Filled.Home, Icons.Filled.BarChart, Icons.Filled.SwapHoriz, Icons.Filled.Layers, Icons.Filled.Person),
+                selectedIndex = selectedIndex,
+                onItemSelected = { index ->
+                    onBottomItemSelected(index)
+                }
+            )
         }
     }
 }
@@ -248,4 +267,3 @@ private fun formatCurrency(amount: Double): String {
     val df = DecimalFormat("#,##0.00", symbols)
     return "$${df.format(amount)}"
 }
-

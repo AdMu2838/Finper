@@ -119,7 +119,16 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
 
     // Si se seleccionó una categoría, mostrar la pantalla de transacciones para esa categoría (pantalla completa)
     if (selectedCategory != null) {
-        CategoryTransactionsScreen(category = selectedCategory!!, onBack = { selectedCategory = null })
+        CategoryTransactionsScreen(
+            category = selectedCategory!!,
+            onBack = { selectedCategory = null },
+            selectedIndex = bottomSelected,
+            onBottomItemSelected = { idx ->
+                // propagar la selección al padre / AppNavigation
+                bottomSelected = idx
+                onBottomItemSelected(idx)
+            }
+        )
     }
 }
 
