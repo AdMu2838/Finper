@@ -1,5 +1,6 @@
 package com.devgarden.finper.ui.features.transactions
 
+import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -24,9 +26,12 @@ import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.viewmodel.CategoriesViewModel
+import com.devgarden.finper.ui.viewmodel.TransactionsViewModel
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.text.SimpleDateFormat
+import java.util.*
 
 // Modelo de datos específico para esta pantalla
 data class TransactionModel(
@@ -39,6 +44,9 @@ data class TransactionModel(
     val amount: String,
     val isExpense: Boolean
 )
+
+// Valor por defecto compartido para categoría cuando no hay selección
+private const val DEFAULT_CATEGORY = "Otros"
 
 // Datos de ejemplo usados en la UI preview y en memoria
 private val sampleTransactions = listOf(
@@ -96,7 +104,9 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
                     .background(Color(0xFFEBF4FF)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(imageVector = item.icon, contentDescription = item.title, tint = Color(0xFF4285F4))
+                // Tint basado en tipo
+                val tint = if (item.isExpense) Color(0xFFD32F2F) else Color(0xFF4285F4)
+                Icon(imageVector = item.icon, contentDescription = item.title, tint = tint)
             }
 
             Spacer(modifier = Modifier.width(12.dp))
@@ -128,6 +138,20 @@ fun TransactionList(
             TransactionItem(t, modifier = Modifier.padding(vertical = 6.dp))
         }
     }
+}
+
+// Helpers de formato de fecha/hora
+private val dateFormatter = SimpleDateFormat("d 'de' MMMM yyyy", Locale("es"))
+private val timeFormatter = SimpleDateFormat("h:mm a", Locale("es"))
+
+private fun formatDateForDisplay(date: Date?): String {
+    if (date == null) return ""
+    return dateFormatter.format(date)
+}
+
+private fun formatTimeForDisplay(date: Date?): String {
+    if (date == null) return ""
+    return timeFormatter.format(date)
 }
 
 // --- Secciones extraídas para mejorar la legibilidad ---
@@ -238,6 +262,7 @@ private fun CategoryDropdown(
             modifier = Modifier.fillMaxWidth(),
             readOnly = true,
             label = { Text("Categoría") },
+            placeholder = { if (selected.isBlank()) Text("Seleccionar categoría") },
             trailingIcon = {
                 IconButton(onClick = { expanded = !expanded }) {
                     Icon(imageVector = if (expanded) Icons.Default.ArrowDropUp else Icons.Default.ArrowDropDown, contentDescription = "Abrir")
@@ -247,8 +272,8 @@ private fun CategoryDropdown(
 
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }, modifier = Modifier.fillMaxWidth()) {
             if (categories.isEmpty()) {
-                DropdownMenuItem(text = { Text("Otros") }, onClick = {
-                    onSelected("Otros")
+                DropdownMenuItem(text = { Text(DEFAULT_CATEGORY) }, onClick = {
+                    onSelected(DEFAULT_CATEGORY)
                     expanded = false
                 })
             } else {
@@ -273,8 +298,8 @@ private fun NewTransactionDialog(
     onAmountChange: (String) -> Unit,
     categoryValue: String,
     onCategoryChange: (String) -> Unit,
-    dateValue: String,
-    onDateChange: (String) -> Unit,
+    dateValue: Date?,
+    onDateChange: (Date) -> Unit,
     categories: List<String>,
     categoriesLoading: Boolean,
     categoriesError: String?,
@@ -282,6 +307,28 @@ private fun NewTransactionDialog(
     onSave: () -> Unit
 ) {
     if (!show) return
+
+    val context = LocalContext.current
+    var showPicker by remember { mutableStateOf(false) }
+
+    if (showPicker) {
+        // Inicializar picker con la fecha actual o la fecha seleccionada
+        val cal = Calendar.getInstance().apply { time = dateValue ?: Date() }
+        DatePickerDialog(context, { _, year, month, dayOfMonth ->
+            // conservar hora/minuto actual
+            val now = Calendar.getInstance()
+            val chosen = Calendar.getInstance().apply {
+                set(Calendar.YEAR, year)
+                set(Calendar.MONTH, month)
+                set(Calendar.DAY_OF_MONTH, dayOfMonth)
+                set(Calendar.HOUR_OF_DAY, now.get(Calendar.HOUR_OF_DAY))
+                set(Calendar.MINUTE, now.get(Calendar.MINUTE))
+                set(Calendar.SECOND, now.get(Calendar.SECOND))
+            }
+            onDateChange(chosen.time)
+            showPicker = false
+        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -306,12 +353,25 @@ private fun NewTransactionDialog(
                         Text("Error cargando categorías: ${categoriesError}", color = Color.Red)
                     }
                     else -> {
-                        CategoryDropdown(categories = categories, selected = categoryValue.ifBlank { "Otros" }, onSelected = onCategoryChange)
+                        CategoryDropdown(categories = categories, selected = categoryValue, onSelected = onCategoryChange)
                     }
                 }
 
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = dateValue, onValueChange = onDateChange, label = { Text("Fecha (ej: Abril 30)") })
+
+                // Campo de fecha (mostrar hoy por defecto), abrir datepicker al tocar
+                OutlinedTextField(
+                    value = dateValue?.let { "${formatDateForDisplay(it)} ${formatTimeForDisplay(it)}" } ?: "",
+                    onValueChange = {},
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Fecha") },
+                    trailingIcon = {
+                        IconButton(onClick = { showPicker = true }) {
+                            Icon(imageVector = Icons.Default.CalendarToday, contentDescription = "Seleccionar fecha")
+                        }
+                    }
+                )
             }
         },
         confirmButton = {
@@ -333,8 +393,31 @@ fun TransactionsScreen(
 ) {
     var selectedFilter by remember { mutableStateOf(initialFilter) }
 
-    // Lista mutable en memoria para que los nuevos items se muestren inmediatamente
-    val transactions = remember { mutableStateListOf<TransactionModel>().apply { addAll(sampleTransactions) } }
+    // Usar ViewModel para transacciones
+    val transactionsViewModel: TransactionsViewModel = viewModel()
+    val tvTransactions by remember { derivedStateOf { transactionsViewModel.transactions } }
+
+    // Mapear DTOs a modelos UI
+    val transactionsMapped by remember(tvTransactions) {
+        derivedStateOf {
+            tvTransactions.map { dto ->
+                val icon = if (dto.isExpense) Icons.Default.ShoppingBasket else Icons.Default.Payments
+                val amountStr = if (dto.isExpense) "-S/.${formatNumber(dto.amount)}" else "S/.${formatNumber(dto.amount)}"
+                val dateStr = formatDateForDisplay(dto.date)
+                val timeStr = formatTimeForDisplay(dto.date)
+                TransactionModel(
+                    id = dto.id,
+                    icon = icon,
+                    title = dto.description.ifBlank { if (dto.isExpense) "Gasto" else "Ingreso" },
+                    time = timeStr,
+                    date = dateStr,
+                    category = dto.category.ifBlank { DEFAULT_CATEGORY },
+                    amount = amountStr,
+                    isExpense = dto.isExpense
+                )
+            }
+        }
+    }
 
     // Estados para el diálogo de creación
     var showDialog by remember { mutableStateOf(false) }
@@ -342,10 +425,9 @@ fun TransactionsScreen(
     var newTitle by remember { mutableStateOf("") }
     var newAmount by remember { mutableStateOf("") }
     var newCategory by remember { mutableStateOf("") }
-    var newDate by remember { mutableStateOf("") }
+    var newDate by remember { mutableStateOf<Date?>(Date()) } // por defecto hoy
 
     // Estados para categorías (obtenidas desde Firestore)
-    // Obtener categorías desde un ViewModel dedicado (sigue el patrón de UserViewModel)
     val categoriesViewModel: CategoriesViewModel = viewModel()
     val categories by remember { derivedStateOf { categoriesViewModel.categories } }
     val categoriesLoading by remember { derivedStateOf { categoriesViewModel.loading } }
@@ -373,7 +455,7 @@ fun TransactionsScreen(
                     newTitle = ""
                     newAmount = ""
                     newCategory = ""
-                    newDate = ""
+                    newDate = Date()
                     showDialog = true
                 },
                 onAddExpense = {
@@ -381,15 +463,15 @@ fun TransactionsScreen(
                     newTitle = ""
                     newAmount = ""
                     newCategory = ""
-                    newDate = ""
+                    newDate = Date()
                     showDialog = true
                 }
             )
 
             val filtered = when (selectedFilter) {
-                TransactionFilter.ALL -> transactions
-                TransactionFilter.INCOME -> transactions.filter { !it.isExpense }
-                TransactionFilter.EXPENSE -> transactions.filter { it.isExpense }
+                TransactionFilter.ALL -> transactionsMapped
+                TransactionFilter.INCOME -> transactionsMapped.filter { !it.isExpense }
+                TransactionFilter.EXPENSE -> transactionsMapped.filter { it.isExpense }
             }
 
             TransactionList(
@@ -431,18 +513,26 @@ fun TransactionsScreen(
             categoriesError = categoriesError,
             onDismiss = { showDialog = false },
             onSave = {
-                // Crear nuevo item y añadir a la lista
+                // Crear la transacción en Firestore mediante ViewModel
                 val amountDouble = newAmount.toDoubleOrNull() ?: 0.0
-                val formatted = if (isExpenseDialog) "-S/.${formatNumber(amountDouble)}" else "S/.${formatNumber(amountDouble)}"
-                val icon = if (isExpenseDialog) Icons.Default.ShoppingBasket else Icons.Default.Payments
-                val id = System.currentTimeMillis().toString()
-                val title = if (newTitle.isBlank()) (if (isExpenseDialog) "Gasto" else "Ingreso") else newTitle
-                val category = if (newCategory.isBlank()) "Varios" else newCategory
-                val date = if (newDate.isBlank()) "Hoy" else newDate
+                val category = if (newCategory.isBlank()) DEFAULT_CATEGORY else newCategory
+                val dateObj = newDate ?: Date()
+                val description = if (newTitle.isBlank()) (if (isExpenseDialog) "Gasto" else "Ingreso") else newTitle
 
-                transactions.add(0, TransactionModel(id = id, icon = icon, title = title, time = "--:--", date = date, category = category, amount = formatted, isExpense = isExpenseDialog))
-
-                showDialog = false
+                transactionsViewModel.addTransaction(amountDouble, category, dateObj, description, isExpenseDialog) { success, err ->
+                    // si quieres manejar feedback, aquí puedes mostrar un snackbar
+                    if (success) {
+                        // Limpiar campos
+                        newTitle = ""
+                        newAmount = ""
+                        newCategory = ""
+                        newDate = Date()
+                        showDialog = false
+                    } else {
+                        // mantener diálogo abierto y quizá mostrar error (no implementado visualmente)
+                        // Para simplificar dejamos el diálogo abierto
+                    }
+                }
             }
         )
     }
