@@ -6,6 +6,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import java.util.*
@@ -104,7 +105,7 @@ class TransactionsViewModel : ViewModel() {
     }
 
     /**
-     * Añade una transacción en Firestore bajo users/{uid}/transactions.
+     * Añade una transacción en Firestore bajo users/{uid}/transactions y actualiza el balance del usuario atómicamente.
      * date: si es null, se guardará el timestamp actual.
      */
     @Suppress("unused")
@@ -115,22 +116,35 @@ class TransactionsViewModel : ViewModel() {
             return
         }
 
-        val data = hashMapOf<String, Any>(
-            "amount" to amount,
-            "category" to category,
-            "date" to (date?.let { Timestamp(it) } ?: Timestamp.now()),
-            "description" to description,
-            "isExpense" to isExpense
-        )
+        try {
+            val userRef = db.collection("users").document(user.uid)
+            val newDocRef = userRef.collection("transactions").document() // generar id
 
-        db.collection("users").document(user.uid).collection("transactions")
-            .add(data)
-            .addOnSuccessListener {
-                onComplete(true, null)
-            }
-            .addOnFailureListener { ex ->
-                onComplete(false, ex.localizedMessage)
-            }
+            val data = hashMapOf<String, Any>(
+                "amount" to amount,
+                "category" to category,
+                "date" to (date?.let { Timestamp(it) } ?: Timestamp.now()),
+                "description" to description,
+                "isExpense" to isExpense
+            )
+
+            val batch = db.batch()
+            batch.set(newDocRef, data)
+
+            // Incrementar balance: sumar para ingreso, restar para gasto
+            val incrementValue = if (isExpense) -amount else amount
+            batch.update(userRef, "balance", FieldValue.increment(incrementValue))
+
+            batch.commit()
+                .addOnSuccessListener {
+                    onComplete(true, null)
+                }
+                .addOnFailureListener { ex ->
+                    onComplete(false, ex.localizedMessage)
+                }
+        } catch (ex: Exception) {
+            onComplete(false, ex.localizedMessage)
+        }
     }
 
     override fun onCleared() {
