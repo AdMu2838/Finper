@@ -28,12 +28,15 @@ import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.components.SummaryCard
+import com.devgarden.finper.ui.viewmodel.TransactionsViewModel
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
+import java.text.SimpleDateFormat
+import java.util.*
 
 
-// --- Data class to represent a transaction ---
+// --- Data class to represent a transaction in the UI ---
 data class Transaction(
     val icon: ImageVector,
     val title: String,
@@ -44,16 +47,91 @@ data class Transaction(
     val isExpense: Boolean = true
 )
 
-// --- Sample data for the list ---
+// --- Sample data for preview ---
 val sampleTransactions = listOf(
-    Transaction(Icons.Default.Payments, "Salario", "18:27", "Abril 30", "Mes", "S/.4,000,00", isExpense = false),
-    Transaction(Icons.Default.ShoppingBasket, "Verduras", "17:00", "Abril 24", "Despensa", "-S/.100,00"),
-    Transaction(Icons.Default.RealEstateAgent, "Renta", "8:30", "Abril 15", "Renta", "-S/.674,40")
+    Transaction(Icons.Default.Payments, "Salario", "18:27", "Abril 30", "Mes", "S/.4,000.00", isExpense = false),
+    Transaction(Icons.Default.ShoppingBasket, "Verduras", "17:00", "Abril 24", "Despensa", "-S/.100.00"),
+    Transaction(Icons.Default.RealEstateAgent, "Renta", "8:30", "Abril 15", "Renta", "-S/.674.40")
 )
 
 @Composable
 fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
     var bottomSelected by remember { mutableIntStateOf(0) }
+
+    // Estado de periodo seleccionado: 0=Diario,1=Semanal,2=Mensual
+    var selectedPeriod by remember { mutableIntStateOf(1) }
+
+    // Obtener transacciones desde el ViewModel
+    val transactionsViewModel: TransactionsViewModel = viewModel()
+    val dtoTransactions by remember { derivedStateOf { transactionsViewModel.transactions } }
+
+    // Mapear DTOs a modelo UI y filtrar por periodo
+    val mappedTransactions by remember(dtoTransactions, selectedPeriod) {
+        derivedStateOf {
+            // función para comprobar si una fecha está en el rango [start,end]
+            fun inRange(date: Date?, start: Date, end: Date): Boolean {
+                if (date == null) return false
+                return !date.before(start) && !date.after(end)
+            }
+
+            // calcular rangos
+            val now = Calendar.getInstance()
+
+            // diario: inicio hoy 00:00:00, fin hoy 23:59:59.999
+            val startDay = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }.time
+            val endDay = Calendar.getInstance().apply {
+                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
+            }.time
+
+            // semanal: lunes 00:00 -> domingo 23:59
+            val calWeekStart = Calendar.getInstance().apply {
+                // establecer al inicio del día
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+                val dow = get(Calendar.DAY_OF_WEEK)
+                // Java Calendar: SUNDAY=1 ... SATURDAY=7. Queremos Monday as start
+                val diffToMonday = if (dow == Calendar.SUNDAY) -6 else Calendar.MONDAY - dow
+                add(Calendar.DAY_OF_MONTH, diffToMonday)
+            }
+            val startWeek = calWeekStart.time
+            val endWeek = Calendar.getInstance().apply {
+                time = startWeek
+                add(Calendar.DAY_OF_MONTH, 6)
+                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
+            }.time
+
+            // mensual: primer dia 00:00 -> ultimo dia 23:59
+            val calMonthStart = Calendar.getInstance().apply {
+                set(Calendar.DAY_OF_MONTH, 1)
+                set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+            }
+            val startMonth = calMonthStart.time
+            val endMonth = Calendar.getInstance().apply {
+                time = startMonth
+                set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH))
+                set(Calendar.HOUR_OF_DAY, 23); set(Calendar.MINUTE, 59); set(Calendar.SECOND, 59); set(Calendar.MILLISECOND, 999)
+            }.time
+
+            // Mapear y filtrar
+            val mapped = dtoTransactions.map { dto ->
+                val icon = if (dto.isExpense) Icons.Default.ShoppingBasket else Icons.Default.Payments
+                val amountStr = if (dto.isExpense) "-S/.${formatNumber(dto.amount)}" else "S/.${formatNumber(dto.amount)}"
+                val dateStr = formatDateForDisplay(dto.date)
+                val timeStr = formatTimeForDisplay(dto.date)
+                Transaction(icon = icon, title = dto.description.ifBlank { if (dto.isExpense) "Gasto" else "Ingreso" }, time = timeStr, date = dateStr, category = dto.category.ifBlank { "Otros" }, amount = amountStr, isExpense = dto.isExpense)
+            }
+
+            // En lugar de usar index, que puede desincronizarse, mapeamos a pares (dto, transaction) y filtramos por dto.date
+            val pairedMapping = dtoTransactions.mapIndexed { index, dto -> Pair(dto, mapped[index]) }
+
+            when (selectedPeriod) {
+                0 -> pairedMapping.filter { inRange(it.first.date, startDay, endDay) }.map { it.second }
+                1 -> pairedMapping.filter { inRange(it.first.date, startWeek, endWeek) }.map { it.second }
+                else -> pairedMapping.filter { inRange(it.first.date, startMonth, endMonth) }.map { it.second }
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -74,11 +152,11 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                     SavingsGoalsCard(modifier = Modifier.padding(top = 16.dp, bottom = 16.dp))
                 }
                 item {
-                    // --- Time Period Toggle ---
-                    TimePeriodToggle(modifier = Modifier.padding(bottom = 16.dp))
+                    // --- Time Period Toggle (controlado) ---
+                    TimePeriodToggle(selectedIndex = selectedPeriod, onSelected = { selectedPeriod = it }, modifier = Modifier.padding(bottom = 16.dp))
                 }
                 // --- Transaction Items ---
-                items(sampleTransactions) { transaction ->
+                items(if (mappedTransactions.isNotEmpty()) mappedTransactions else sampleTransactions) { transaction ->
                     TransactionItem(transaction)
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -102,6 +180,29 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
             }
         )
     }
+}
+
+// Helpers de formato de fecha/hora
+private val dateFormatter = SimpleDateFormat("d 'de' MMMM yyyy", Locale("es"))
+private val timeFormatter = SimpleDateFormat("h:mm a", Locale("es"))
+
+private fun formatDateForDisplay(date: Date?): String {
+    if (date == null) return ""
+    return dateFormatter.format(date)
+}
+
+private fun formatTimeForDisplay(date: Date?): String {
+    if (date == null) return ""
+    return timeFormatter.format(date)
+}
+
+private fun formatNumber(amount: Double): String {
+    val symbols = DecimalFormatSymbols().apply {
+        groupingSeparator = ','
+        decimalSeparator = '.'
+    }
+    val df = DecimalFormat("#,##0.00", symbols)
+    return df.format(amount)
 }
 
 @Composable
@@ -157,6 +258,7 @@ private fun formatCurrency(amount: Double): String {
     return "S/.${df.format(amount)}"
 }
 
+@Suppress("unused")
 @Composable
 fun InfoCard(title: String, amount: String, icon: ImageVector, isExpense: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -313,8 +415,8 @@ fun GoalItem(icon: ImageVector, text: String, amount: String, isExpense: Boolean
 }
 
 @Composable
-fun TimePeriodToggle(modifier: Modifier = Modifier) {
-    var selectedIndex by remember { mutableIntStateOf(2) }
+fun TimePeriodToggle(modifier: Modifier = Modifier, selectedIndex: Int = 1, onSelected: (Int) -> Unit) {
+    // Componente controlado: usamos directamente selectedIndex (provisto por el padre)
     val periods = listOf("Diario", "Semanal", "Mensual")
 
     Card(
@@ -329,15 +431,18 @@ fun TimePeriodToggle(modifier: Modifier = Modifier) {
                 .padding(4.dp)
         ) {
             periods.forEachIndexed { index, period ->
+                val isSelected = selectedIndex == index
                 Button(
-                    onClick = { selectedIndex = index },
+                    onClick = {
+                        onSelected(index)
+                    },
                     modifier = Modifier
                         .weight(1f)
                         .height(40.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (selectedIndex == index) Color(0xFF00D1A1) else Color.White,
-                        contentColor = if (selectedIndex == index) Color.White else Color.Gray
+                        containerColor = if (isSelected) Color(0xFF00D1A1) else Color.White,
+                        contentColor = if (isSelected) Color.White else Color.Gray
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
