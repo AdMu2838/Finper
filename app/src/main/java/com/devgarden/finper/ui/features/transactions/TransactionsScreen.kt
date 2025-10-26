@@ -249,7 +249,7 @@ private fun ControlsSection(
                 val incomeStr = if (monthlyIncomesLoading) "S/.--" else FormatUtils.formatCurrency(monthlyIncomes)
 
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Ingreso", fontWeight = FontWeight.SemiBold)
+                    Text("Ingreso", fontWeight = FontWeight.SemiBold, color = Color.Black)
                     Text(incomeStr, fontWeight = FontWeight.Bold)
                 }
             }
@@ -265,7 +265,7 @@ private fun ControlsSection(
                 val expenseStr = if (monthlyLoading) "S/.--" else FormatUtils.formatCurrency(monthlyExpenses)
 
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Gastos", fontWeight = FontWeight.SemiBold)
+                    Text("Gastos", fontWeight = FontWeight.SemiBold, color = Color.Black)
                     Text(expenseStr, fontWeight = FontWeight.Bold)
                 }
             }

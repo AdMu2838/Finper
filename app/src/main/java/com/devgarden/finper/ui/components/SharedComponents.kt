@@ -201,11 +201,12 @@ fun TransactionListItem(
                     fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.Black
                 )
                 Text(
                     text = subtitle,
-                    color = Color.Gray,
+                    color = Color.Black,
                     fontSize = 12.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis

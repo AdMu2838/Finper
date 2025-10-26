@@ -37,6 +37,8 @@ import java.text.DecimalFormatSymbols
 import java.text.SimpleDateFormat
 import java.util.*
 import androidx.core.net.toUri
+import com.devgarden.finper.ui.theme.LightGreenGray
+import com.devgarden.finper.ui.theme.PrimaryGreen
 
 // Nodo plano para la lista (encabezado por mes o transacción)
 private sealed class ListNode {
@@ -137,7 +139,6 @@ fun CategoryTransactionsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // White rounded content area
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f)
@@ -145,12 +146,10 @@ fun CategoryTransactionsScreen(
                 .background(Color.White)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // optional index link
                     if (indexUrl != null) {
                         Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.Center) {
                             TextButton(onClick = {
                                 try {
-                                    // usar let para evitar problemas con smart-cast en properties delegadas
                                     indexUrl?.let { url ->
                                         val intent = Intent(Intent.ACTION_VIEW, url.toUri())
                                         context.startActivity(intent)
@@ -191,7 +190,7 @@ fun CategoryTransactionsScreen(
                                         .padding(top = 8.dp, bottom = 8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(text = node.month, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+                                        Text(text = node.month, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f), color = Color.Black)
                                         IconButton(onClick = { /* TODO: abrir calendario o filtro */ }, modifier = Modifier.size(36.dp)) {
                                             Icon(Icons.Filled.Event, contentDescription = "Calendario", tint = Color(0xFF007A4F))
                                         }
@@ -226,25 +225,25 @@ private fun TransactionCard(tx: TransactionsViewModel.TransactionDto) {
             .fillMaxWidth()
             .padding(vertical = 6.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6FFF9))
+        colors = CardDefaults.cardColors(containerColor = LightGreenGray)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(modifier = Modifier
                 .size(44.dp)
                 .clip(CircleShape)
-                .background(Color(0xFFCCE8FF)), contentAlignment = Alignment.Center) {
+                .background(PrimaryGreen), contentAlignment = Alignment.Center) {
                 // icono de comida
-                Icon(Icons.Filled.Restaurant, contentDescription = null, tint = Color(0xFF007A4F))
+                Icon(Icons.Filled.Restaurant, contentDescription = null, tint = Color.Black)
             }
 
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(tx.description.ifBlank { if (tx.isExpense) "Gasto" else "Ingreso" }, fontWeight = FontWeight.SemiBold)
-                Text(text = tx.date?.let { formatDateShort(it) } ?: "", fontSize = 12.sp, color = Color.Gray)
+                Text(tx.description.ifBlank { if (tx.isExpense) "Gasto" else "Ingreso" }, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(text = tx.date?.let { formatDateShort(it) } ?: "", fontSize = 12.sp, color = Color.Black)
             }
 
-            Text(text = (if (tx.isExpense) "-" else "") + formatCurrency(tx.amount), fontWeight = FontWeight.Bold, color = if (tx.isExpense) Color(0xFF0B6EFF) else Color(0xFF00B974))
+            Text(text = (if (tx.isExpense) "-" else "") + formatCurrency(tx.amount), fontWeight = FontWeight.Bold, color = if (tx.isExpense) Color.Red else Color(0xFF00B974))
         }
     }
 }
