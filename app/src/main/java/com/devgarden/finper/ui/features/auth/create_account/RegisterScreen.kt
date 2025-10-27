@@ -15,8 +15,10 @@ import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -85,7 +87,7 @@ fun RegisterScreen(
                     .fillMaxHeight(0.13f)
             )
 
-            // Tarjeta blanca del formulario
+            // Tarjeta blanca del formulario con scroll
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -96,8 +98,9 @@ fun RegisterScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
                         .padding(horizontal = 32.dp, vertical = 40.dp)
-                        .padding(bottom = 16.dp), // Padding extra en la parte inferior para que no se pegue
+                        .padding(bottom = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     // Campo Nombre Completo
