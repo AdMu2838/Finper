@@ -101,7 +101,7 @@ fun SummaryCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(ComponentDefaults.CARD_RADIUS),
-        colors = CardDefaults.cardColors(containerColor = ComponentDefaults.CARD_BACKGROUND_COLOR),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
@@ -112,12 +112,12 @@ fun SummaryCard(
                 Column {
                     Text(
                         text = balanceLabel,
-                        color = ComponentDefaults.TEXT_PRIMARY_COLOR,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 12.sp
                     )
                     Text(
                         text = balanceValue,
-                        color = ComponentDefaults.TEXT_PRIMARY_COLOR,
+                        color = MaterialTheme.colorScheme.primary,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -126,12 +126,12 @@ fun SummaryCard(
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
                         text = expenseLabel,
-                        color = ComponentDefaults.TEXT_PRIMARY_COLOR,
+                        color = MaterialTheme.colorScheme.onBackground,
                         fontSize = 12.sp
                     )
                     Text(
                         text = expenseValue,
-                        color = ComponentDefaults.EXPENSE_COLOR,
+                        color = Color.Red,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -185,11 +185,9 @@ fun TransactionListItem(
             // Icono con fondo circular
             IconWithBackground(
                 icon = icon,
-                backgroundColor = if (isExpense)
-                    ComponentDefaults.EXPENSE_BACKGROUND_COLOR
-                else
-                    ComponentDefaults.INCOME_BACKGROUND_COLOR,
-                iconTint = if (isExpense) Color.Red else Color(0xFF4285F4)
+                backgroundColor = MaterialTheme.colorScheme.primaryContainer
+,
+                    iconTint = if (isExpense) Color.Red else Color(0xFF4285F4)
             )
 
             Spacer(modifier = Modifier.width(12.dp))

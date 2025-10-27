@@ -21,7 +21,7 @@ val LightGrayText = Color(0xFF9E9E9E)
 // Colores para modo oscuro
 val DarkPrimaryGreen = Color(0xFF00D9A8)
 val DarkBackground = Color(0xFF121212)
-val DarkSurface = Color(0xFF1E1E1E)
+val DarkSurface = Color(0xFF242729)
 val DarkSurfaceVariant = Color(0xFF2C2C2C)
 val DarkTextPrimary = Color(0xFFE1E1E1)
 val DarkTextSecondary = Color(0xFFB0B0B0)

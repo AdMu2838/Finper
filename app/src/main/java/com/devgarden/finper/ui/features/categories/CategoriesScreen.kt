@@ -172,7 +172,7 @@ fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
                 .size(100.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .padding(8.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE6F6F2)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {

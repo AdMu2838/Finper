@@ -86,13 +86,13 @@ fun CategoryTransactionsScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF0F4F7)) {
+        Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background)  {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header verde con título centrado y botones
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(MaterialTheme.colorScheme.background)
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(top = 24.dp, bottom = 16.dp)
             ) {
                 Row(
@@ -146,7 +146,7 @@ fun CategoryTransactionsScreen(
                 .fillMaxWidth()
                 .weight(1f)
                 .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                .background(Color.White)
+                .background(MaterialTheme.colorScheme.surface)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     if (indexUrl != null) {

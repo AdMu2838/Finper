@@ -164,7 +164,7 @@ fun AnalysisScreen(
                                 onClick = { monthSemester = 0 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (monthSemester == 0) Color(0xFF00D1A1) else Color(0xFFE0E0E0),
+                                    containerColor = if (monthSemester == 0) Color(0xFF00D1A1) else MaterialTheme.colorScheme.surface,
                                     contentColor = if (monthSemester == 0) Color.White else Color.Gray
                                 ),
                                 shape = RoundedCornerShape(12.dp)
@@ -175,7 +175,7 @@ fun AnalysisScreen(
                                 onClick = { monthSemester = 1 },
                                 modifier = Modifier.weight(1f),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (monthSemester == 1) Color(0xFF00D1A1) else Color(0xFFE0E0E0),
+                                    containerColor = if (monthSemester == 1) Color(0xFF00D1A1) else MaterialTheme.colorScheme.surface,
                                     contentColor = if (monthSemester == 1) Color.White else Color.Gray
                                 ),
                                 shape = RoundedCornerShape(12.dp)
@@ -446,7 +446,7 @@ private fun PeriodToggle(selected: Int, onSelected: (Int) -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5FFF9)),
+        colors = CardDefaults.cardColors(containerColor =MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(modifier = Modifier.padding(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -457,7 +457,7 @@ private fun PeriodToggle(selected: Int, onSelected: (Int) -> Unit) {
                     modifier = Modifier.weight(1f).height(40.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSelected) Color(0xFF00D1A1) else Color.White,
+                        containerColor = if (isSelected) Color(0xFF00D1A1) else MaterialTheme.colorScheme.surface,
                         contentColor = if (isSelected) Color.White else Color.Gray
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp),

@@ -94,7 +94,7 @@ private fun ProfileScreenContent(
                 .fillMaxWidth()
                 .padding(top = 150.dp, start = 16.dp, end = 16.dp, bottom = 80.dp),
             shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFF5FFF9)),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
             Column(modifier = Modifier
@@ -102,7 +102,7 @@ private fun ProfileScreenContent(
                 .padding(top = 64.dp, bottom = 16.dp, start = 16.dp, end = 16.dp),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Text(text = effectiveName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFF15323B))
+                Text(text = effectiveName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(text = "ID: ${usuario?.uid ?: "-"}", fontSize = 12.sp, color = Color.Gray)
 
@@ -200,7 +200,7 @@ private fun ProfileMenuItem(icon: ImageVector, label: String, tint: Color = Colo
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        Text(text = label, fontSize = 14.sp, color = Color(0xFF15323B))
+        Text(text = label, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
     }
 }
 
