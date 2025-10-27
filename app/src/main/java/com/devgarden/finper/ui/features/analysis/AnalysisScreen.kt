@@ -2,7 +2,10 @@ package com.devgarden.finper.ui.features.analysis
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -11,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,6 +29,7 @@ import kotlinx.coroutines.delay
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
+import kotlin.math.abs
 import kotlin.math.max
 
 /**
@@ -77,9 +83,19 @@ fun AnalysisScreen(
     // Gastos del mes actual (siempre)
     val monthlyExpenses = transactionsViewModel.monthlyExpenses
 
-    // Calcular sums según rango para mostrar en el chart
+    // Calcular datos agrupados para el gráfico (ahora con ingresos y gastos separados)
     val groupedData by remember(transactions, debouncedSelected, monthSemester) {
-        derivedStateOf { groupTransactionsForPeriod(transactions, debouncedSelected, monthSemester) }
+        derivedStateOf { groupTransactionsForPeriodSeparated(transactions, debouncedSelected, monthSemester) }
+    }
+
+    // Calcular totales del período seleccionado
+    val periodTotals by remember(groupedData) {
+        derivedStateOf {
+            val totalIncome = groupedData.sumOf { it.income }
+            val totalExpense = groupedData.sumOf { it.expense }
+            val net = totalIncome - totalExpense
+            Triple(totalIncome, totalExpense, net)
+        }
     }
 
     val balance = userViewModel.balance
@@ -101,9 +117,10 @@ fun AnalysisScreen(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = "Análisis",
+                        text = "Análisis Financiero",
                         color = Color.White,
                         fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier.align(Alignment.CenterVertically)
                     )
 
@@ -137,7 +154,12 @@ fun AnalysisScreen(
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
                     .background(Color.White)
             ) {
-                Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(16.dp)
+                ) {
                     // Selector de periodos
                     PeriodToggle(selected = selectedPeriod, onSelected = { selectedPeriod = it })
 
@@ -175,10 +197,24 @@ fun AnalysisScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Gráfico de barras con los datos agrupados
-                    BarChart(data = groupedData)
+                    // Tarjetas de resumen del período
+                    PeriodSummaryCards(
+                        totalIncome = periodTotals.first,
+                        totalExpense = periodTotals.second,
+                        net = periodTotals.third
+                    )
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    // Leyenda del gráfico
+                    ChartLegend()
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Gráfico de barras mejorado
+                    ImprovedBarChart(data = groupedData)
+
+                    Spacer(modifier = Modifier.height(80.dp)) // Espacio para el BottomBar
                 }
             }
 
@@ -199,34 +235,324 @@ fun AnalysisScreen(
     }
 }
 
-// Composable simple de barras: recibe lista de pares (label, value). Value positivo = ingreso, negativo = gasto
-@Composable
-private fun BarChart(data: List<Pair<String, Double>>, modifier: Modifier = Modifier) {
-    val maxPositive = data.maxOfOrNull { if (it.second > 0) it.second else 0.0 } ?: 0.0
-    val maxNegative = data.maxOfOrNull { if (it.second < 0) -it.second else 0.0 } ?: 0.0
-    val overallMax = max(maxPositive, maxNegative)
+// Modelo de datos para el gráfico mejorado
+data class ChartDataPoint(
+    val label: String,
+    val income: Double,
+    val expense: Double
+)
 
-    Column(modifier = modifier.fillMaxWidth()) {
-        // Area de gráfico
-        Box(modifier = Modifier
-            .fillMaxWidth()
-            .height(200.dp)
-            .background(Color(0xFFF6FFF9))) {
-            Row(modifier = Modifier.fillMaxSize(), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                data.forEach { (label, value) ->
-                    val heightFraction = if (overallMax <= 0.0) 0.0 else (kotlin.math.abs(value) / overallMax)
-                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.CenterHorizontally) {
-                        // Bar: azul para ingresos (positivo), rojo para gastos (negativo)
-                        Box(modifier = Modifier
-                            .height((heightFraction * 160).dp) // escalar a 160dp máximo
-                            .width(18.dp)
-                            .background(if (value >= 0) Color(0xFF0B6EFF) else Color(0xFFD32F2F)))
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(text = label, fontSize = 12.sp, color = Color.Gray, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
+// Tarjetas de resumen del período
+@Composable
+private fun PeriodSummaryCards(
+    totalIncome: Double,
+    totalExpense: Double,
+    net: Double
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Tarjeta de Ingresos
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5F3)),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFF00C896), CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Ingresos",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "S/. ${formatCurrency(totalIncome)}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF00C896)
+                )
+            }
+        }
+
+        // Tarjeta de Gastos
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color(0xFFFF6B6B), CircleShape)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Gastos",
+                        fontSize = 12.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "S/. ${formatCurrency(totalExpense)}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFFFF6B6B)
+                )
+            }
+        }
+
+        // Tarjeta de Balance Neto
+        Card(
+            modifier = Modifier.weight(1f),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = if (net >= 0) Color(0xFFE8F5F3) else Color(0xFFFFF0F0)
+            ),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                Text(
+                    text = "Neto",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "${if (net >= 0) "+" else ""}S/. ${formatCurrency(abs(net))}",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (net >= 0) Color(0xFF00C896) else Color(0xFFFF6B6B)
+                )
+            }
+        }
+    }
+}
+
+// Leyenda del gráfico
+@Composable
+private fun ChartLegend() {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Ingresos
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(Color(0xFF00C896), RoundedCornerShape(3.dp))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Ingresos",
+                fontSize = 13.sp,
+                color = Color.DarkGray,
+                fontWeight = FontWeight.Medium
+            )
+        }
+
+        Spacer(modifier = Modifier.width(24.dp))
+
+        // Gastos
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(12.dp)
+                    .background(Color(0xFFFF6B6B), RoundedCornerShape(3.dp))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                text = "Gastos",
+                fontSize = 13.sp,
+                color = Color.DarkGray,
+                fontWeight = FontWeight.Medium
+            )
+        }
+    }
+}
+
+// Gráfico de barras mejorado con ingresos y gastos separados
+@Composable
+private fun ImprovedBarChart(
+    data: List<ChartDataPoint>,
+    modifier: Modifier = Modifier
+) {
+    val maxValue = data.maxOfOrNull { max(it.income, it.expense) } ?: 1.0
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFCFF)),
+        elevation = CardDefaults.cardElevation(2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Comparativa de Ingresos y Gastos",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.DarkGray
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Área del gráfico
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(280.dp)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Gráfico de barras
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.Bottom,
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
+                            data.forEach { dataPoint ->
+                                BarGroup(
+                                    label = dataPoint.label,
+                                    income = dataPoint.income,
+                                    expense = dataPoint.expense,
+                                    maxValue = maxValue,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Línea de referencia
+                    HorizontalDivider(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color.LightGray,
+                        thickness = 1.dp
+                    )
                 }
             }
         }
+    }
+}
+
+// Grupo de barras (una para ingresos, otra para gastos)
+@Composable
+private fun BarGroup(
+    label: String,
+    income: Double,
+    expense: Double,
+    maxValue: Double,
+    modifier: Modifier = Modifier
+) {
+    val incomeHeight = if (maxValue > 0) ((income / maxValue) * 200).dp else 0.dp
+    val expenseHeight = if (maxValue > 0) ((expense / maxValue) * 200).dp else 0.dp
+
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Bottom
+    ) {
+        // Las dos barras
+        Row(
+            modifier = Modifier.height(200.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            // Barra de Ingresos
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                if (income > 0) {
+                    Text(
+                        text = formatCurrencyShort(income),
+                        fontSize = 10.sp,
+                        color = Color(0xFF00C896),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .width(14.dp)
+                        .height(incomeHeight)
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .background(Color(0xFF00C896))
+                        .shadow(2.dp, RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                )
+            }
+
+            // Barra de Gastos
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                if (expense > 0) {
+                    Text(
+                        text = formatCurrencyShort(expense),
+                        fontSize = 10.sp,
+                        color = Color(0xFFFF6B6B),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 2.dp)
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .width(14.dp)
+                        .height(expenseHeight)
+                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                        .background(Color(0xFFFF6B6B))
+                        .shadow(2.dp, RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Etiqueta
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = Color.DarkGray,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.width(40.dp)
+        )
     }
 }
 
@@ -261,20 +587,15 @@ private fun PeriodToggle(selected: Int, onSelected: (Int) -> Unit) {
     }
 }
 
-// Agrupa las transacciones según el periodo y devuelve lista de pares (label, value).
-// value será negativo para gastos, positivo para ingresos.
-private fun groupTransactionsForPeriod(
+// Agrupa las transacciones según el periodo y devuelve lista de ChartDataPoint con ingresos y gastos separados
+private fun groupTransactionsForPeriodSeparated(
     transactions: List<TransactionsViewModel.TransactionDto>,
     period: Int,
     monthSemester: Int = 0
-): List<Pair<String, Double>> {
+): List<ChartDataPoint> {
     when (period) {
         0 -> { // Diario -> días de la semana actual (L a D)
-            val labels = mutableListOf<String>()
-            val sums = mutableListOf<Double>()
             val cal = Calendar.getInstance()
-
-            // Establecer al lunes de la semana actual
             cal.firstDayOfWeek = Calendar.MONDAY
             cal.set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
             cal.set(Calendar.HOUR_OF_DAY, 0)
@@ -282,7 +603,7 @@ private fun groupTransactionsForPeriod(
             cal.set(Calendar.SECOND, 0)
             cal.set(Calendar.MILLISECOND, 0)
 
-            // Iterar por los 7 días de la semana (Lunes a Domingo)
+            val result = mutableListOf<ChartDataPoint>()
             repeat(7) {
                 val dayStart = cal.time
                 val dayEndCal = cal.clone() as Calendar
@@ -292,23 +613,23 @@ private fun groupTransactionsForPeriod(
                 dayEndCal.set(Calendar.MILLISECOND, 999)
                 val dayEnd = dayEndCal.time
 
-                // Sumar transacciones de este día
-                val sum = transactions.filter { tx ->
+                val dayTransactions = transactions.filter { tx ->
                     tx.date != null && tx.date >= dayStart && tx.date <= dayEnd
-                }.sumOf { tx ->
-                    tx.amount * if (tx.isExpense) -1 else 1
                 }
 
-                labels.add(shortDayLabel(cal.get(Calendar.DAY_OF_WEEK)))
-                sums.add(sum)
+                val income = dayTransactions.filter { !it.isExpense }.sumOf { it.amount }
+                val expense = dayTransactions.filter { it.isExpense }.sumOf { it.amount }
+
+                result.add(ChartDataPoint(
+                    label = shortDayLabel(cal.get(Calendar.DAY_OF_WEEK)),
+                    income = income,
+                    expense = expense
+                ))
                 cal.add(Calendar.DAY_OF_YEAR, 1)
             }
-            return labels.zip(sums)
+            return result
         }
         1 -> { // Semanal -> semanas del mes actual
-            val labels = mutableListOf<String>()
-            val sums = mutableListOf<Double>()
-
             val monthStart = Calendar.getInstance().apply {
                 set(Calendar.DAY_OF_MONTH, 1)
                 set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
@@ -324,6 +645,7 @@ private fun groupTransactionsForPeriod(
                 firstWeekStart.add(Calendar.DAY_OF_YEAR, -7)
             }
 
+            val result = mutableListOf<ChartDataPoint>()
             val weekStart = firstWeekStart.clone() as Calendar
             var idx = 1
             while (!weekStart.time.after(monthEnd.time)) {
@@ -333,22 +655,28 @@ private fun groupTransactionsForPeriod(
                 weekEnd.set(Calendar.HOUR_OF_DAY, 23); weekEnd.set(Calendar.MINUTE, 59); weekEnd.set(Calendar.SECOND, 59); weekEnd.set(Calendar.MILLISECOND, 999)
                 val end = weekEnd.time
 
-                val sum = transactions.filter { it.date != null && it.date in start..end }.sumOf { it.amount * if (it.isExpense) -1 else 1 }
-                labels.add("S$idx")
-                sums.add(sum)
+                val weekTransactions = transactions.filter { it.date != null && it.date in start..end }
+                val income = weekTransactions.filter { !it.isExpense }.sumOf { it.amount }
+                val expense = weekTransactions.filter { it.isExpense }.sumOf { it.amount }
+
+                result.add(ChartDataPoint(
+                    label = "S$idx",
+                    income = income,
+                    expense = expense
+                ))
 
                 weekStart.add(Calendar.WEEK_OF_YEAR, 1)
                 idx++
             }
-
-            return labels.zip(sums)
+            return result
         }
         2 -> { // Mensual -> mostrar 6 meses según el semestre seleccionado
             val startMonth = if (monthSemester == 0) 0 else 6
             val endMonth = if (monthSemester == 0) 5 else 11
 
             val labels = (startMonth..endMonth).map { monthShortLabel(it) }
-            val sums = MutableList(6) { 0.0 }
+            val incomes = MutableList(6) { 0.0 }
+            val expenses = MutableList(6) { 0.0 }
             val cal = Calendar.getInstance()
             val year = cal.get(Calendar.YEAR)
 
@@ -360,15 +688,20 @@ private fun groupTransactionsForPeriod(
                     val m = c.get(Calendar.MONTH)
                     if (m in startMonth..endMonth) {
                         val index = m - startMonth
-                        sums[index] = sums[index] + tx.amount * if (tx.isExpense) -1 else 1
+                        if (tx.isExpense) {
+                            expenses[index] = expenses[index] + tx.amount
+                        } else {
+                            incomes[index] = incomes[index] + tx.amount
+                        }
                     }
                 }
             }
-            return labels.zip(sums)
+            return labels.mapIndexed { index, label ->
+                ChartDataPoint(label, incomes[index], expenses[index])
+            }
         }
         3 -> { // Anual -> últimos 5 años
-            val labels = mutableListOf<String>()
-            val sums = mutableListOf<Double>()
+            val result = mutableListOf<ChartDataPoint>()
             val cal = Calendar.getInstance()
             cal.add(Calendar.YEAR, -4)
             repeat(5) {
@@ -377,12 +710,19 @@ private fun groupTransactionsForPeriod(
                 val endCal = Calendar.getInstance(); endCal.set(Calendar.YEAR, y); endCal.set(Calendar.MONTH, 11); endCal.set(Calendar.DAY_OF_MONTH, 31); endCal.set(Calendar.HOUR_OF_DAY, 23); endCal.set(Calendar.MINUTE, 59); endCal.set(Calendar.SECOND, 59); endCal.set(Calendar.MILLISECOND, 999)
                 val start = startCal.time
                 val end = endCal.time
-                val sum = transactions.filter { it.date != null && it.date in start..end }.sumOf { it.amount * if (it.isExpense) -1 else 1 }
-                labels.add(y.toString())
-                sums.add(sum)
+
+                val yearTransactions = transactions.filter { it.date != null && it.date in start..end }
+                val income = yearTransactions.filter { !it.isExpense }.sumOf { it.amount }
+                val expense = yearTransactions.filter { it.isExpense }.sumOf { it.amount }
+
+                result.add(ChartDataPoint(
+                    label = y.toString(),
+                    income = income,
+                    expense = expense
+                ))
                 cal.add(Calendar.YEAR, 1)
             }
-            return labels.zip(sums)
+            return result
         }
         else -> return emptyList()
     }
@@ -504,4 +844,13 @@ private fun formatCurrency(amount: Double): String {
     dfs.decimalSeparator = '.'
     val df = DecimalFormat("#,##0.00", dfs)
     return df.format(amount)
+}
+
+private fun formatCurrencyShort(amount: Double): String {
+    val locale = Locale.forLanguageTag("es-PE")
+    return when {
+        amount >= 1000000 -> String.format(locale, "%.1fM", amount / 1000000)
+        amount >= 1000 -> String.format(locale, "%.1fK", amount / 1000)
+        else -> String.format(locale, "%.0f", amount)
+    }
 }
