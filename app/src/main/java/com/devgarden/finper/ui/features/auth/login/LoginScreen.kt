@@ -43,7 +43,8 @@ fun LoginScreen(
     onForgotPasswordClick: () -> Unit,
     onGoogleLoginClick: () -> Unit,
     onBiometricLoginSuccess: () -> Unit = {},
-    biometricViewModel: BiometricViewModel = viewModel()
+    biometricViewModel: BiometricViewModel = viewModel(),
+    loginViewModel: LoginViewModel = viewModel()
 ) {
     var email by remember { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -54,6 +55,9 @@ fun LoginScreen(
 
     var showBiometricError by remember { mutableStateOf(false) }
     var biometricErrorMessage by remember { mutableStateOf("") }
+
+    val uiState by loginViewModel.uiState.collectAsState()
+    val isLoading = uiState is LoginUiState.Loading
 
     LaunchedEffect(Unit) {
         biometricViewModel.initialize(context)
@@ -98,6 +102,7 @@ fun LoginScreen(
                         label = { Text("Nombre De Usuario O Email") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        enabled = !isLoading,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = PrimaryGreen,
@@ -115,6 +120,7 @@ fun LoginScreen(
                         label = { Text("Contraseña") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
+                        enabled = !isLoading,
                         visualTransformation = if (isPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                         trailingIcon = {
@@ -139,13 +145,25 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen)
+                        colors = ButtonDefaults.buttonColors(containerColor = PrimaryGreen),
+                        enabled = !isLoading
                     ) {
-                        Text("Ingresar", fontSize = 18.sp, color = Color.White)
+                        if (isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Ingresar", fontSize = 18.sp, color = Color.White)
+                        }
                     }
 
                     // Enlace Olvidaste tu contraseña
-                    TextButton(onClick = onForgotPasswordClick) {
+                    TextButton(
+                        onClick = onForgotPasswordClick,
+                        enabled = !isLoading
+                    ) {
                         Text("Olvidaste tu contraseña?", color = GrayTextColor, fontSize = 14.sp)
                     }
 
@@ -155,7 +173,8 @@ fun LoginScreen(
                             .fillMaxWidth()
                             .height(50.dp),
                         shape = RoundedCornerShape(16.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = LightGreenGray)
+                        colors = ButtonDefaults.buttonColors(containerColor = LightGreenGray),
+                        enabled = !isLoading
                     ) {
                         Text("Registrarse", fontSize = 18.sp, color = DarkTextColor)
                     }
@@ -165,7 +184,7 @@ fun LoginScreen(
                     // Botón de huella digital (solo si está habilitado)
                     if (biometricViewModel.biometricEnabled &&
                         biometricViewModel.biometricStatus == BiometricStatus.READY &&
-                        activity != null) {
+                        activity != null && !isLoading) {
 
                         Text(
                             text = "Usa Tu Huella Para Entrar",
@@ -226,7 +245,10 @@ fun LoginScreen(
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(24.dp)
                     ) {
-                        IconButton(onClick = onGoogleLoginClick) {
+                        IconButton(
+                            onClick = onGoogleLoginClick,
+                            enabled = !isLoading
+                        ) {
                             Image(
                                 painter = painterResource(id = R.drawable.ic_google_logo),
                                 contentDescription = "Google Login",
@@ -235,6 +257,43 @@ fun LoginScreen(
                         }
                     }
                     Spacer(modifier = Modifier.height(32.dp))
+                }
+            }
+        }
+
+        // Overlay de carga con animación
+        if (isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Card(
+                    modifier = Modifier
+                        .size(120.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(8.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(48.dp),
+                            color = PrimaryGreen,
+                            strokeWidth = 4.dp
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "Ingresando...",
+                            color = DarkTextColor,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
         }
@@ -268,4 +327,3 @@ fun LoginScreenPreview() {
         )
     }
 }
-
