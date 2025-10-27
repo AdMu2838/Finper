@@ -21,6 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.devgarden.finper.ui.components.AdaptiveAdBanner
 import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.PrimaryGreen
@@ -282,6 +283,7 @@ private fun ControlsSection(
     onAddExpense: () -> Unit
 ) {
     Column(modifier = modifier.fillMaxWidth().padding(16.dp)) {
+
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Card(
                 modifier = Modifier.weight(1f),

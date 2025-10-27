@@ -1,10 +1,10 @@
 package com.devgarden.finper.ui.features.categories
 
 import android.content.Intent
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +56,16 @@ fun CategoryTransactionsScreen(
     vm: TransactionsViewModel = viewModel()
 ) {
     val context = LocalContext.current
+
+    // Interceptar botón físico de retroceso del sistema para volver a CategoriesScreen
+    BackHandler(enabled = true) {
+        // limpiar query de categoría y llamar al callback de retroceso
+        try {
+            vm.clearCategoryQuery()
+        } catch (_: Exception) {
+        }
+        onBack()
+    }
 
     // cargar transacciones por categoría
     LaunchedEffect(category) {

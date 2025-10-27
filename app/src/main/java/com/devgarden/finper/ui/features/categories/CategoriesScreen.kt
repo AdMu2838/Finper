@@ -21,6 +21,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.devgarden.finper.ui.components.AdaptiveAdBanner
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.components.SummaryCard
 import com.devgarden.finper.ui.components.TopRoundedHeader
@@ -89,14 +90,20 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
                 //progress = 0.3f,
                 progressLabel = ""
             )
+            Spacer(modifier = Modifier.height(8.dp))
 
-            Spacer(modifier = Modifier.height(16.dp))
+            // Banner de anuncios no invasivo
+            AdaptiveAdBanner(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+            )
 
             // Grid de categorías (3 columnas)
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 8.dp)
             ) {
                 val rows = categories.chunked(3)
                 rows.forEach { row ->
@@ -163,13 +170,13 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
 fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
     Column(
         modifier = Modifier
-            .padding(6.dp)
+            .padding(2.dp)
             .clickable { onClick() },
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Card(
             modifier = Modifier
-                .size(100.dp)
+                .size(80.dp)
                 .clip(RoundedCornerShape(16.dp))
                 .padding(8.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -180,12 +187,12 @@ fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
                     category.icon,
                     contentDescription = category.label,
                     tint = MaterialTheme.colorScheme.surfaceTint,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(30.dp)
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = category.label, fontSize = 16.sp,
+        Text(text = category.label, fontSize = 13.sp,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.tertiary)
     }

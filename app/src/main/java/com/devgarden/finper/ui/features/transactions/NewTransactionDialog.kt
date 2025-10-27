@@ -104,7 +104,7 @@ fun NewTransactionDialog(
                     .fillMaxWidth(0.95f)
                     .padding(16.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(8.dp)
             ) {
                 Column(
@@ -144,7 +144,7 @@ fun NewTransactionDialog(
                                     text = if (isExpense) "Agregar Gasto" else "Agregar Ingreso",
                                     fontSize = 20.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2D3748)
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Completa los datos",
@@ -301,12 +301,6 @@ fun NewTransactionDialog(
                                 pressedElevation = 4.dp
                             )
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 "Guardar",
                                 fontSize = 16.sp,
