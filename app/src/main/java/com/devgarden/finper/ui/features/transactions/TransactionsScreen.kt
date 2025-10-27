@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -140,14 +141,42 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
 @Composable
 fun TransactionList(
     modifier: Modifier = Modifier,
-    transactions: List<TransactionModel>
+    transactions: List<TransactionModel>,
+    viewModel: TransactionsViewModel = viewModel()
 ) {
+    val hasMore by remember { derivedStateOf { viewModel.hasMoreTransactions } }
+    val loadingMore by remember { derivedStateOf { viewModel.loadingMore } }
+
     if (transactions.isEmpty()) {
         EmptyTransactionsCard()
     } else {
         LazyColumn(modifier = modifier) {
-            items(transactions) { t ->
+            itemsIndexed(transactions) { index, t ->
                 TransactionItem(t, modifier = Modifier.padding(vertical = 6.dp))
+
+                // Detectar cuando se llega al final para cargar más
+                if (index == transactions.size - 1 && hasMore && !loadingMore) {
+                    LaunchedEffect(Unit) {
+                        viewModel.loadMoreTransactions()
+                    }
+                }
+            }
+
+            // Mostrar indicador de carga al final
+            if (loadingMore) {
+                item {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = PrimaryGreen
+                        )
+                    }
+                }
             }
         }
     }

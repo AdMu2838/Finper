@@ -84,6 +84,7 @@ object Constants {
         const val MIN_TRANSACTION_AMOUNT = 0.01
         const val MAX_DESCRIPTION_LENGTH = 200
         const val MAX_CATEGORY_NAME_LENGTH = 50
+        const val TRANSACTIONS_PAGE_SIZE = 10
     }
 
     // --- Tags para Logging ---
@@ -96,4 +97,3 @@ object Constants {
         const val TAG_REGISTER = "RegisterViewModel"
     }
 }
-

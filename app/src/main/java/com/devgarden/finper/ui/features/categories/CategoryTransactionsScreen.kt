@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -67,6 +68,8 @@ fun CategoryTransactionsScreen(
     val loading by remember { derivedStateOf { vm.categoryLoading } }
     val transactions by remember { derivedStateOf { vm.categoryTransactions } }
     val indexUrl by remember { derivedStateOf { vm.categoryIndexUrl } }
+    val hasMore by remember { derivedStateOf { vm.hasMoreCategoryTransactions } }
+    val loadingMore by remember { derivedStateOf { vm.loadingMoreCategory } }
 
     // Agrupar transacciones por mes-año (descendente)
     val grouped = remember(transactions) {
@@ -182,7 +185,7 @@ fun CategoryTransactionsScreen(
                             }
                         }
 
-                        items(nodes) { node ->
+                        itemsIndexed(nodes) { index, node ->
                             when (node) {
                                 is ListNode.Header -> {
                                     Row(modifier = Modifier
@@ -198,6 +201,30 @@ fun CategoryTransactionsScreen(
                                 }
                                 is ListNode.Tx -> {
                                     TransactionCard(node.tx)
+                                }
+                            }
+
+                            // Detectar cuando se llega al final para cargar más
+                            if (index == nodes.size - 1 && hasMore && !loadingMore) {
+                                LaunchedEffect(Unit) {
+                                    vm.loadMoreCategoryTransactions()
+                                }
+                            }
+                        }
+
+                        // Mostrar indicador de carga al final
+                        if (loadingMore) {
+                            item {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp),
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(24.dp),
+                                        color = PrimaryGreen
+                                    )
                                 }
                             }
                         }

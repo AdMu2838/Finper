@@ -3,8 +3,7 @@ package com.devgarden.finper.ui.features.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -17,7 +16,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -56,6 +54,8 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
 
     val transactionsViewModel: TransactionsViewModel = viewModel()
     val dtoTransactions by remember { derivedStateOf { transactionsViewModel.transactions } }
+    val hasMore by remember { derivedStateOf { transactionsViewModel.hasMoreTransactions } }
+    val loadingMore by remember { derivedStateOf { transactionsViewModel.loadingMore } }
 
     LaunchedEffect(selectedPeriod) {
         val range = DateUtils.getRangeForPeriodIndex(selectedPeriod)
@@ -111,7 +111,7 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                         EmptyTransactionsMessage()
                     }
                 } else {
-                    items(mappedTransactions) { transaction ->
+                    itemsIndexed(mappedTransactions) { index, transaction ->
                         TransactionListItem(
                             icon = transaction.icon,
                             title = transaction.title,
@@ -121,6 +121,30 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                             isExpense = transaction.isExpense
                         )
                         Spacer(modifier = Modifier.height(12.dp))
+
+                        // Detectar cuando se llega al final para cargar más
+                        if (index == mappedTransactions.size - 1 && hasMore && !loadingMore) {
+                            LaunchedEffect(Unit) {
+                                transactionsViewModel.loadMoreTransactions()
+                            }
+                        }
+                    }
+
+                    // Mostrar indicador de carga al final
+                    if (loadingMore) {
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(24.dp),
+                                    color = PrimaryGreen
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -289,5 +313,3 @@ private fun TimePeriodToggle(
         }
     }
 }
-
-

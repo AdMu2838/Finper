@@ -9,6 +9,7 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.ListenerRegistration
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.DocumentSnapshot
 import com.devgarden.finper.utils.Constants
 import com.devgarden.finper.utils.DateUtils
 import com.devgarden.finper.utils.FirebaseUtils
@@ -54,6 +55,17 @@ class TransactionsViewModel : ViewModel() {
 
     private var listener: ListenerRegistration? = null
 
+    // --- Estados de paginación ---
+    var hasMoreTransactions by mutableStateOf(true)
+        private set
+
+    var loadingMore by mutableStateOf(false)
+        private set
+
+    private var lastVisibleDocument: DocumentSnapshot? = null
+    private var currentStartDate: Date? = null
+    private var currentEndDate: Date? = null
+
     // --- Estados para gastos mensuales ---
     var monthlyExpenses by mutableStateOf(0.0)
         private set
@@ -91,6 +103,15 @@ class TransactionsViewModel : ViewModel() {
     var categoryIndexUrl by mutableStateOf<String?>(null)
         private set
 
+    var hasMoreCategoryTransactions by mutableStateOf(true)
+        private set
+
+    var loadingMoreCategory by mutableStateOf(false)
+        private set
+
+    private var lastCategoryDocument: DocumentSnapshot? = null
+    private var currentCategory: String? = null
+
     init {
         listenTransactionsRange(null, null)
         listenCurrentMonthExpenses()
@@ -99,6 +120,7 @@ class TransactionsViewModel : ViewModel() {
 
     /**
      * Escucha transacciones en tiempo real dentro de un rango de fechas.
+     * Carga la primera página de transacciones.
      *
      * @param start Fecha de inicio del rango (null para sin límite)
      * @param end Fecha de fin del rango (null para sin límite)
@@ -109,6 +131,13 @@ class TransactionsViewModel : ViewModel() {
             clearTransactions(Constants.ErrorMessages.ERROR_USER_NOT_AUTHENTICATED)
             return
         }
+
+        // Guardar fechas para paginación
+        currentStartDate = start
+        currentEndDate = end
+        lastVisibleDocument = null
+        hasMoreTransactions = true
+        transactions = emptyList()
 
         var query: Query = buildBaseQuery(user.uid)
 
@@ -124,9 +153,60 @@ class TransactionsViewModel : ViewModel() {
                 )
         }
 
-        query = query.orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+        query = query
+            .orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+            .limit(Constants.Limits.TRANSACTIONS_PAGE_SIZE.toLong())
 
         attachQueryListener(query)
+    }
+
+    /**
+     * Carga más transacciones (paginación).
+     */
+    fun loadMoreTransactions() {
+        if (loadingMore || !hasMoreTransactions || loading) return
+
+        val user = auth.currentUser
+        if (user == null) return
+
+        val lastDoc = lastVisibleDocument ?: return
+
+        loadingMore = true
+
+        var query: Query = buildBaseQuery(user.uid)
+
+        if (currentStartDate != null && currentEndDate != null) {
+            query = query
+                .whereGreaterThanOrEqualTo(
+                    Constants.Firestore.FIELD_DATE,
+                    FirebaseUtils.toFirebaseTimestamp(currentStartDate!!)
+                )
+                .whereLessThanOrEqualTo(
+                    Constants.Firestore.FIELD_DATE,
+                    FirebaseUtils.toFirebaseTimestamp(currentEndDate!!)
+                )
+        }
+
+        query = query
+            .orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+            .startAfter(lastDoc)
+            .limit(Constants.Limits.TRANSACTIONS_PAGE_SIZE.toLong())
+
+        query.get()
+            .addOnSuccessListener { snapshot ->
+                val newTransactions = parseTransactionsSnapshot(snapshot.documents)
+                transactions = transactions + newTransactions
+
+                if (snapshot.documents.isNotEmpty()) {
+                    lastVisibleDocument = snapshot.documents.last()
+                }
+
+                hasMoreTransactions = newTransactions.size == Constants.Limits.TRANSACTIONS_PAGE_SIZE
+                loadingMore = false
+            }
+            .addOnFailureListener {
+                loadingMore = false
+            }
     }
 
     /**
@@ -143,6 +223,11 @@ class TransactionsViewModel : ViewModel() {
             return
         }
 
+        // Reiniciar paginación
+        currentCategory = category
+        lastCategoryDocument = null
+        hasMoreCategoryTransactions = true
+        categoryTransactions = emptyList()
         categoryLoading = true
         categoryError = null
         categoryIndexUrl = null
@@ -151,9 +236,16 @@ class TransactionsViewModel : ViewModel() {
             buildBaseQuery(user.uid)
                 .whereEqualTo(Constants.Firestore.FIELD_CATEGORY, category)
                 .orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+                .limit(Constants.Limits.TRANSACTIONS_PAGE_SIZE.toLong())
                 .get()
                 .addOnSuccessListener { snapshot ->
                     categoryTransactions = parseTransactionsSnapshot(snapshot.documents)
+
+                    if (snapshot.documents.isNotEmpty()) {
+                        lastCategoryDocument = snapshot.documents.last()
+                    }
+
+                    hasMoreCategoryTransactions = snapshot.documents.size == Constants.Limits.TRANSACTIONS_PAGE_SIZE
                     categoryLoading = false
                 }
                 .addOnFailureListener { ex ->
@@ -167,6 +259,42 @@ class TransactionsViewModel : ViewModel() {
     }
 
     /**
+     * Carga más transacciones por categoría (paginación).
+     */
+    fun loadMoreCategoryTransactions() {
+        if (loadingMoreCategory || !hasMoreCategoryTransactions || categoryLoading) return
+
+        val user = auth.currentUser
+        if (user == null) return
+
+        val lastDoc = lastCategoryDocument ?: return
+        val category = currentCategory ?: return
+
+        loadingMoreCategory = true
+
+        buildBaseQuery(user.uid)
+            .whereEqualTo(Constants.Firestore.FIELD_CATEGORY, category)
+            .orderBy(Constants.Firestore.FIELD_DATE, Query.Direction.DESCENDING)
+            .startAfter(lastDoc)
+            .limit(Constants.Limits.TRANSACTIONS_PAGE_SIZE.toLong())
+            .get()
+            .addOnSuccessListener { snapshot ->
+                val newTransactions = parseTransactionsSnapshot(snapshot.documents)
+                categoryTransactions = categoryTransactions + newTransactions
+
+                if (snapshot.documents.isNotEmpty()) {
+                    lastCategoryDocument = snapshot.documents.last()
+                }
+
+                hasMoreCategoryTransactions = newTransactions.size == Constants.Limits.TRANSACTIONS_PAGE_SIZE
+                loadingMoreCategory = false
+            }
+            .addOnFailureListener {
+                loadingMoreCategory = false
+            }
+    }
+
+    /**
      * Limpia el estado de la consulta por categoría.
      */
     fun clearCategoryQuery() {
@@ -174,6 +302,9 @@ class TransactionsViewModel : ViewModel() {
         categoryLoading = false
         categoryError = null
         categoryIndexUrl = null
+        lastCategoryDocument = null
+        hasMoreCategoryTransactions = true
+        currentCategory = null
     }
 
     /**
@@ -336,7 +467,14 @@ class TransactionsViewModel : ViewModel() {
                 return@addSnapshotListener
             }
 
-            transactions = snapshot?.documents?.let { parseTransactionsSnapshot(it) } ?: emptyList()
+            val newTransactions = snapshot?.documents?.let { parseTransactionsSnapshot(it) } ?: emptyList()
+            transactions = newTransactions
+
+            if (snapshot != null && snapshot.documents.isNotEmpty()) {
+                lastVisibleDocument = snapshot.documents.last()
+            }
+
+            hasMoreTransactions = newTransactions.size == Constants.Limits.TRANSACTIONS_PAGE_SIZE
             loading = false
         }
     }
@@ -390,12 +528,19 @@ class TransactionsViewModel : ViewModel() {
     private fun performCategoryQueryFallback(userId: String, category: String) {
         buildBaseQuery(userId)
             .whereEqualTo(Constants.Firestore.FIELD_CATEGORY, category)
+            .limit(Constants.Limits.TRANSACTIONS_PAGE_SIZE.toLong())
             .get()
             .addOnSuccessListener { snapshot ->
                 val transactions = parseTransactionsSnapshot(snapshot.documents)
                 categoryTransactions = transactions.sortedWith(
                     compareByDescending { it.date ?: Date(0) }
                 )
+
+                if (snapshot.documents.isNotEmpty()) {
+                    lastCategoryDocument = snapshot.documents.last()
+                }
+
+                hasMoreCategoryTransactions = snapshot.documents.size == Constants.Limits.TRANSACTIONS_PAGE_SIZE
             }
             .addOnFailureListener {
                 // Ignorar: ya tenemos el error original
@@ -411,6 +556,8 @@ class TransactionsViewModel : ViewModel() {
         loading = false
         error = errorMessage
         listener = null
+        lastVisibleDocument = null
+        hasMoreTransactions = true
     }
 
     override fun onCleared() {
