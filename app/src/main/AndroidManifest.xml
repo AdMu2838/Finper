@@ -18,6 +18,11 @@
         android:theme="@style/Theme.Finper"
         tools:targetApi="31">
 
+        <!-- AdMob App ID -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3992395861925484~5838089574"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

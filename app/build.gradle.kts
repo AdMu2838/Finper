@@ -72,4 +72,6 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:20.5.0")
     // Biometric Authentication
     implementation("androidx.biometric:biometric:1.1.0")
+    // Google AdMob
+    implementation("com.google.android.gms:play-services-ads:23.5.0")
 }

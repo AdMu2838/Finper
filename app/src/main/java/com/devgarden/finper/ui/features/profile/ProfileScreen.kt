@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.zIndex
 import com.devgarden.finper.ui.components.BottomBar
+import com.devgarden.finper.ui.components.AdaptiveAdBanner
 import com.devgarden.finper.ui.theme.FinperTheme
 import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
@@ -119,6 +120,13 @@ private fun ProfileScreenContent(
                         onLogout()
                     }
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Banner de anuncios no invasivo
+                AdaptiveAdBanner(
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
 

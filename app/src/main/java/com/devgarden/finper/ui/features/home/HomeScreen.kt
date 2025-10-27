@@ -22,6 +22,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.devgarden.finper.ui.theme.PrimaryGreen
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.components.SummaryCard
+import com.devgarden.finper.ui.components.AdaptiveAdBanner
 import com.devgarden.finper.ui.components.TransactionListItem
 import com.devgarden.finper.ui.viewmodel.TransactionsViewModel
 import com.devgarden.finper.ui.viewmodel.UserViewModel
@@ -103,6 +104,15 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                         selectedIndex = selectedPeriod,
                         onSelected = { selectedPeriod = it },
                         modifier = Modifier.padding(bottom = 16.dp)
+                    )
+                }
+
+                // Banner de anuncios no invasivo
+                item {
+                    AdaptiveAdBanner(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 16.dp)
                     )
                 }
 
