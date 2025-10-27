@@ -3,7 +3,6 @@ package com.devgarden.finper.ui.features.analysis
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -29,7 +28,6 @@ import kotlinx.coroutines.delay
 import java.text.DecimalFormat
 import java.text.DecimalFormatSymbols
 import java.util.*
-import kotlin.math.abs
 import kotlin.math.max
 
 /**
@@ -86,16 +84,6 @@ fun AnalysisScreen(
     // Calcular datos agrupados para el gráfico (ahora con ingresos y gastos separados)
     val groupedData by remember(transactions, debouncedSelected, monthSemester) {
         derivedStateOf { groupTransactionsForPeriodSeparated(transactions, debouncedSelected, monthSemester) }
-    }
-
-    // Calcular totales del período seleccionado
-    val periodTotals by remember(groupedData) {
-        derivedStateOf {
-            val totalIncome = groupedData.sumOf { it.income }
-            val totalExpense = groupedData.sumOf { it.expense }
-            val net = totalIncome - totalExpense
-            Triple(totalIncome, totalExpense, net)
-        }
     }
 
     val balance = userViewModel.balance
@@ -197,15 +185,6 @@ fun AnalysisScreen(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
 
-                    // Tarjetas de resumen del período
-                    PeriodSummaryCards(
-                        totalIncome = periodTotals.first,
-                        totalExpense = periodTotals.second,
-                        net = periodTotals.third
-                    )
-
-                    Spacer(modifier = Modifier.height(20.dp))
-
                     // Leyenda del gráfico
                     ChartLegend()
 
@@ -241,118 +220,6 @@ data class ChartDataPoint(
     val income: Double,
     val expense: Double
 )
-
-// Tarjetas de resumen del período
-@Composable
-private fun PeriodSummaryCards(
-    totalIncome: Double,
-    totalExpense: Double,
-    net: Double
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
-        // Tarjeta de Ingresos
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5F3)),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFF00C896), CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Ingresos",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "S/. ${formatCurrency(totalIncome)}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF00C896)
-                )
-            }
-        }
-
-        // Tarjeta de Gastos
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0F0)),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(8.dp)
-                            .background(Color(0xFFFF6B6B), CircleShape)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Gastos",
-                        fontSize = 12.sp,
-                        color = Color.Gray,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "S/. ${formatCurrency(totalExpense)}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFFF6B6B)
-                )
-            }
-        }
-
-        // Tarjeta de Balance Neto
-        Card(
-            modifier = Modifier.weight(1f),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (net >= 0) Color(0xFFE8F5F3) else Color(0xFFFFF0F0)
-            ),
-            elevation = CardDefaults.cardElevation(2.dp)
-        ) {
-            Column(
-                modifier = Modifier.padding(12.dp),
-                horizontalAlignment = Alignment.Start
-            ) {
-                Text(
-                    text = "Neto",
-                    fontSize = 12.sp,
-                    color = Color.Gray,
-                    fontWeight = FontWeight.Medium
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "${if (net >= 0) "+" else ""}S/. ${formatCurrency(abs(net))}",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (net >= 0) Color(0xFF00C896) else Color(0xFFFF6B6B)
-                )
-            }
-        }
-    }
-}
 
 // Leyenda del gráfico
 @Composable
