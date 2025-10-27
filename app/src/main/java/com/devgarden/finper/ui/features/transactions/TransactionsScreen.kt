@@ -286,7 +286,7 @@ private fun ControlsSection(
             Card(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 val transactionsViewModel: TransactionsViewModel = viewModel()
                 val monthlyIncomes = transactionsViewModel.monthlyIncomes
@@ -294,7 +294,7 @@ private fun ControlsSection(
                 val incomeStr = if (monthlyIncomesLoading) "S/.--" else FormatUtils.formatCurrency(monthlyIncomes)
 
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Ingreso", fontWeight = FontWeight.SemiBold, color = Color.Black)
+                    Text("Ingreso", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Text(incomeStr, fontWeight = FontWeight.Bold, color = PrimaryGreen)
                 }
             }
@@ -302,7 +302,7 @@ private fun ControlsSection(
             Card(
                 modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
                 val transactionsViewModel: TransactionsViewModel = viewModel()
                 val monthlyExpenses = transactionsViewModel.monthlyExpenses
@@ -310,7 +310,7 @@ private fun ControlsSection(
                 val expenseStr = if (monthlyLoading) "S/.--" else FormatUtils.formatCurrency(monthlyExpenses)
 
                 Column(modifier = Modifier.padding(12.dp)) {
-                    Text("Gastos", fontWeight = FontWeight.SemiBold, color = Color.Black)
+                    Text("Gastos", fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurface)
                     Text(expenseStr, fontWeight = FontWeight.Bold, color = Color.Red)
                 }
             }
@@ -457,7 +457,7 @@ fun TransactionsScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF0F4F7))
+                .background(MaterialTheme.colorScheme.background)
                 .padding(bottom = 88.dp)
         ) {
             TransactionsHeader(balanceText = balanceStr)

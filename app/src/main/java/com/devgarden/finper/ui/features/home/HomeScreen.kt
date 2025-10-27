@@ -104,7 +104,7 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                         selectedIndex = selectedPeriod,
                         onSelected = { selectedPeriod = it },
                         modifier = Modifier.padding(bottom = 16.dp)
-                            .background(MaterialTheme.colorScheme.surface)
+
                     )
                 }
 
@@ -114,7 +114,6 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 16.dp)
-                            .background(MaterialTheme.colorScheme.surface)
                     )
                 }
 
@@ -297,7 +296,7 @@ private fun TimePeriodToggle(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
@@ -314,8 +313,8 @@ private fun TimePeriodToggle(
                         .height(40.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isSelected) Color(0xFF00D1A1) else Color.White,
-                        contentColor = if (isSelected) Color.White else Color.Gray
+                        containerColor = if (isSelected) Color(0xFF00D1A1) else MaterialTheme.colorScheme.surface,
+                        contentColor = if (isSelected) MaterialTheme.colorScheme.surface else Color.Gray
                     ),
                     elevation = ButtonDefaults.buttonElevation(0.dp)
                 ) {
