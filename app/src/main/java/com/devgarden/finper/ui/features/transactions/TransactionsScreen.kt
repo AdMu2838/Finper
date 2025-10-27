@@ -63,28 +63,34 @@ fun TransactionFilterToggle(
         FilterChip(
             selected = selected == TransactionFilter.ALL,
             onClick = { onSelected(TransactionFilter.ALL) },
-            label = { Text("Todas", color = Color.Black) },
+            label = { Text("Todas") },
             colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = Color(0xFFE0E0E0),
-                selectedLabelColor = Color.Black
+                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
         FilterChip(
             selected = selected == TransactionFilter.INCOME,
             onClick = { onSelected(TransactionFilter.INCOME) },
-            label = { Text("Ingresos", color = Color.Black) },
+            label = { Text("Ingresos") },
             colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = Color(0xFFE0E0E0),
-                selectedLabelColor = Color.Black
+                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
         FilterChip(
             selected = selected == TransactionFilter.EXPENSE,
             onClick = { onSelected(TransactionFilter.EXPENSE) },
-            label = { Text("Gastos", color = Color.Black) },
+            label = { Text("Gastos") },
             colors = FilterChipDefaults.filterChipColors(
-                selectedContainerColor = Color(0xFFE0E0E0),
-                selectedLabelColor = Color.Black
+                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                labelColor = MaterialTheme.colorScheme.onSurfaceVariant
             )
         )
     }
@@ -98,7 +104,7 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -106,7 +112,7 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFFEBF4FF)),
+                    .background(MaterialTheme.colorScheme.primaryContainer),
                 contentAlignment = Alignment.Center
             ) {
                 val tint = if (item.isExpense) Color(0xFFD32F2F) else Color(0xFF4285F4)
@@ -116,8 +122,8 @@ fun TransactionItem(item: TransactionModel, modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = Color.Black)
-                Text("${item.time} • ${item.date}", color = Color.Gray, fontSize = 12.sp)
+                Text(item.title, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurface)
+                Text("${item.time} • ${item.date}", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
             }
 
             Column(horizontalAlignment = Alignment.End) {

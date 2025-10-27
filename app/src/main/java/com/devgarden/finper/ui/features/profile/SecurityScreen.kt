@@ -47,7 +47,7 @@ fun SecurityScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F4F7))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(
             modifier = Modifier
@@ -59,7 +59,7 @@ fun SecurityScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                    .background(PrimaryGreen)
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(start = 18.dp, end = 16.dp, top = 24.dp, bottom = 15.dp)
             ) {
                 Row(

@@ -70,7 +70,7 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F4F7))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header (reusable)

@@ -89,13 +89,13 @@ fun AnalysisScreen(
 
     val balance = userViewModel.balance
 
-    Surface(modifier = Modifier.fillMaxSize(), color = Color(0xFFF0F4F7)) {
+    Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
         Column(modifier = Modifier.fillMaxSize()) {
             // Header verde
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF00B984))
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(top = 24.dp, bottom = 16.dp, start = 16.dp, end = 16.dp)
             ) {
                 Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

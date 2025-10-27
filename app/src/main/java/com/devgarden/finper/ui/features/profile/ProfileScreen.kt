@@ -61,7 +61,7 @@ private fun ProfileScreenContent(
 
     Box(modifier = Modifier
         .fillMaxSize()
-        .background(Color(0xFFF0F4F7))) {
+        .background(MaterialTheme.colorScheme.background)) {
 
         // Header
         Box(
@@ -69,7 +69,7 @@ private fun ProfileScreenContent(
                 .fillMaxWidth()
                 .height(180.dp)
                 .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                .background(PrimaryGreen)
+                .background(MaterialTheme.colorScheme.primary)
         ) {
             // Top Row: back, title, bell
             Row(
