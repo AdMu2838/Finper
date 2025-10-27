@@ -1,11 +1,9 @@
 @file:Suppress("unused")
 package com.devgarden.finper.ui.features.transactions
 
-import android.app.DatePickerDialog
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,7 +16,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -394,117 +391,6 @@ private fun CategoryDropdown(
             }
         }
     }
-}
-
-/**
- * Diálogo para crear nueva transacción.
- */
-@Composable
-private fun NewTransactionDialog(
-    show: Boolean,
-    isExpense: Boolean,
-    titleValue: String,
-    onTitleChange: (String) -> Unit,
-    amountValue: String,
-    onAmountChange: (String) -> Unit,
-    categoryValue: String,
-    onCategoryChange: (String) -> Unit,
-    dateValue: Date?,
-    onDateChange: (Date) -> Unit,
-    categories: List<String>,
-    categoriesLoading: Boolean,
-    categoriesError: String?,
-    onDismiss: () -> Unit,
-    onSave: () -> Unit
-) {
-    if (!show) return
-
-    val context = LocalContext.current
-    var showPicker by remember { mutableStateOf(false) }
-
-    if (showPicker) {
-        val cal = Calendar.getInstance().apply { time = dateValue ?: Date() }
-        DatePickerDialog(context, { _, year, month, dayOfMonth ->
-            val now = Calendar.getInstance()
-            val chosen = Calendar.getInstance().apply {
-                set(Calendar.YEAR, year)
-                set(Calendar.MONTH, month)
-                set(Calendar.DAY_OF_MONTH, dayOfMonth)
-                set(Calendar.HOUR_OF_DAY, now.get(Calendar.HOUR_OF_DAY))
-                set(Calendar.MINUTE, now.get(Calendar.MINUTE))
-                set(Calendar.SECOND, now.get(Calendar.SECOND))
-            }
-            onDateChange(chosen.time)
-            showPicker = false
-        }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
-    }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text(if (isExpense) "Agregar Gasto" else "Agregar Ingreso") },
-        text = {
-            Column {
-                OutlinedTextField(
-                    value = titleValue,
-                    onValueChange = onTitleChange,
-                    label = { Text("Título") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = amountValue,
-                    onValueChange = onAmountChange,
-                    label = { Text("Monto (ej: 1200.50)") }
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                when {
-                    categoriesLoading -> {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Cargando categorías...")
-                        }
-                    }
-                    categoriesError != null -> {
-                        Text("Error cargando categorías: $categoriesError", color = Color.Red)
-                    }
-                    else -> {
-                        CategoryDropdown(
-                            categories = categories,
-                            selected = categoryValue,
-                            onSelected = onCategoryChange
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
-                    value = dateValue?.let {
-                        "${FormatUtils.formatDateForDisplay(it)} ${FormatUtils.formatTimeForDisplay(it)}"
-                    } ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Fecha") },
-                    trailingIcon = {
-                        IconButton(onClick = { showPicker = true }) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarToday,
-                                contentDescription = "Seleccionar fecha"
-                            )
-                        }
-                    }
-                )
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = onSave) { Text("Guardar") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
-        }
-    )
 }
 
 /**
