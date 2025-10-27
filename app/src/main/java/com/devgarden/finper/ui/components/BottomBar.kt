@@ -37,7 +37,7 @@ fun BottomBar(
             .height(100.dp),
         shape = RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.background)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         Row(
             modifier = Modifier

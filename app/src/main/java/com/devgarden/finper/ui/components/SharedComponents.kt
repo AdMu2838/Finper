@@ -175,7 +175,7 @@ fun TransactionListItem(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
@@ -199,15 +199,15 @@ fun TransactionListItem(
                 Text(
                     text = title,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                    fontSize = 16.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    color = Color.Black
+                    color = MaterialTheme.colorScheme.onBackground
                 )
                 Text(
                     text = subtitle,
-                    color = Color.Black,
-                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    fontSize = 14.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

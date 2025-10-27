@@ -104,6 +104,7 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                         selectedIndex = selectedPeriod,
                         onSelected = { selectedPeriod = it },
                         modifier = Modifier.padding(bottom = 16.dp)
+                            .background(MaterialTheme.colorScheme.surface)
                     )
                 }
 
@@ -113,6 +114,7 @@ fun HomeScreen(onBottomItemSelected: (Int) -> Unit = {}) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(bottom = 16.dp)
+                            .background(MaterialTheme.colorScheme.surface)
                     )
                 }
 

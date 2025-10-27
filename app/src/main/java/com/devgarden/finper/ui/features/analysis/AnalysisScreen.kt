@@ -141,7 +141,7 @@ fun AnalysisScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.surface)
             ) {
                 Column(
                     modifier = Modifier
@@ -277,7 +277,7 @@ private fun ImprovedBarChart(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFCFF)),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(2.dp)
     ) {
         Column(
@@ -289,7 +289,7 @@ private fun ImprovedBarChart(
                 text = "Comparativa de Ingresos y Gastos",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.DarkGray
+                color = MaterialTheme.colorScheme.onSurface
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -331,8 +331,8 @@ private fun HorizontalBarGroup(
         // Etiqueta del período
         Text(
             text = label,
-            fontSize = 12.sp,
-            color = Color.DarkGray,
+            fontSize = 16.sp,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Bold,
             modifier = Modifier.padding(bottom = 4.dp)
         )
@@ -344,7 +344,7 @@ private fun HorizontalBarGroup(
         ) {
             Text(
                 text = "Ing:",
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 color = Color(0xFF00C896),
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.width(32.dp)
@@ -373,7 +373,7 @@ private fun HorizontalBarGroup(
 
             Text(
                 text = formatCurrencyShort(income),
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 color = Color(0xFF00C896),
                 fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.width(50.dp),
