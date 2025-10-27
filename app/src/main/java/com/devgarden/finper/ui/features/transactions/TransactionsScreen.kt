@@ -442,12 +442,6 @@ fun TransactionsScreen(
     var newCategory by remember { mutableStateOf("") }
     var newDate by remember { mutableStateOf<Date?>(Date()) }
 
-    // Estados para categorías
-    val categoriesViewModel: CategoriesViewModel = viewModel()
-    val categories by remember { derivedStateOf { categoriesViewModel.categories } }
-    val categoriesLoading by remember { derivedStateOf { categoriesViewModel.loading } }
-    val categoriesError by remember { derivedStateOf { categoriesViewModel.error } }
-
     // Obtener balance
     val userViewModel: UserViewModel = viewModel()
     val balance = userViewModel.balance
@@ -521,9 +515,6 @@ fun TransactionsScreen(
             onCategoryChange = { newCategory = it },
             dateValue = newDate,
             onDateChange = { newDate = it },
-            categories = categories,
-            categoriesLoading = categoriesLoading,
-            categoriesError = categoriesError,
             onDismiss = { showDialog = false },
             onSave = {
                 val amountDouble = newAmount.toDoubleOrNull() ?: 0.0

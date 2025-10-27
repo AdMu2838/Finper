@@ -375,7 +375,22 @@ class TransactionsViewModel : ViewModel() {
             batch.update(userRef, Constants.Firestore.FIELD_BALANCE, FieldValue.increment(incrementValue))
 
             batch.commit()
-                .addOnSuccessListener { onComplete(true, null) }
+                .addOnSuccessListener {
+                    // Actualizar inmediatamente los totales mensuales si la transacción es del mes actual
+                    val transactionDate = date ?: Date()
+                    val monthlyRange = DateUtils.getMonthlyRange()
+
+                    if (transactionDate >= monthlyRange.start && transactionDate <= monthlyRange.end) {
+                        // Actualizar el total correspondiente inmediatamente
+                        if (isExpense) {
+                            monthlyExpenses += amount
+                        } else {
+                            monthlyIncomes += amount
+                        }
+                    }
+
+                    onComplete(true, null)
+                }
                 .addOnFailureListener { ex -> onComplete(false, ex.localizedMessage) }
         } catch (ex: Exception) {
             onComplete(false, ex.localizedMessage)

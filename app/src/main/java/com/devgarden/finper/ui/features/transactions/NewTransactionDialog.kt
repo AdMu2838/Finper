@@ -43,9 +43,6 @@ import java.util.*
  * @param onCategoryChange Callback cuando cambia la categoría
  * @param dateValue Fecha seleccionada
  * @param onDateChange Callback cuando cambia la fecha
- * @param categories Lista de categorías disponibles
- * @param categoriesLoading Si está cargando las categorías
- * @param categoriesError Error al cargar categorías
  * @param onDismiss Callback al cerrar el diálogo
  * @param onSave Callback al guardar la transacción
  */
@@ -61,9 +58,6 @@ fun NewTransactionDialog(
     onCategoryChange: (String) -> Unit,
     dateValue: Date?,
     onDateChange: (Date) -> Unit,
-    categories: List<String>,
-    categoriesLoading: Boolean,
-    categoriesError: String?,
     onDismiss: () -> Unit,
     onSave: () -> Unit
 ) {
@@ -71,6 +65,9 @@ fun NewTransactionDialog(
 
     val context = LocalContext.current
     var showPicker by remember { mutableStateOf(false) }
+
+    // Usar categorías predefinidas
+    val categories = Constants.Defaults.PREDEFINED_CATEGORIES
 
     if (showPicker) {
         val cal = Calendar.getInstance().apply { time = dateValue ?: Date() }
@@ -221,68 +218,12 @@ fun NewTransactionDialog(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Campo de Categoría
-                    when {
-                        categoriesLoading -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(56.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFF5F5F5)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = PrimaryGreen
-                                    )
-                                    Text(
-                                        "Cargando categorías...",
-                                        color = Color.Gray,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-                        }
-                        categoriesError != null -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(Color(0xFFFFEBEE))
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Error,
-                                        contentDescription = null,
-                                        tint = Color(0xFFD32F2F),
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        "Error al cargar categorías",
-                                        color = Color(0xFFD32F2F),
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-                        }
-                        else -> {
-                            CategoryDropdown(
-                                categories = categories,
-                                selected = categoryValue,
-                                onSelected = onCategoryChange
-                            )
-                        }
-                    }
+                    // Campo de Categoría (ahora sin loading ni error)
+                    CategoryDropdown(
+                        categories = categories,
+                        selected = categoryValue,
+                        onSelected = onCategoryChange
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 

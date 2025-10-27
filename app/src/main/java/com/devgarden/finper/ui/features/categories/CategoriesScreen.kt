@@ -45,17 +45,13 @@ fun CategoriesScreen(onBack: () -> Unit = {}, onBottomItemSelected: (Int) -> Uni
     var bottomSelected by remember { mutableStateOf(Constants.Navigation.BOTTOM_NAV_CATEGORIES) }
     var selectedCategory by remember { mutableStateOf<String?>(null) }
 
-    val categories = listOf(
-        Category(Icons.Default.Restaurant, "Comida"),
-        Category(Icons.Default.DirectionsBus, "Transporte"),
-        Category(Icons.Default.LocalHospital, "Medicina"),
-        Category(Icons.Default.ShoppingBasket, "Comestibles"),
-        Category(Icons.Default.Home, "Alquiler"),
-        Category(Icons.Default.CardGiftcard, "Regalos"),
-        Category(Icons.Default.Savings, "Ahorros"),
-        Category(Icons.Default.Movie, "Entretenimiento"),
-        Category(Icons.Default.Add, "Otros")
-    )
+    // Usar categorías desde Constants
+    val categories = Constants.Defaults.PREDEFINED_CATEGORIES.map { categoryName ->
+        Category(
+            icon = Constants.Defaults.getCategoryIcon(categoryName),
+            label = categoryName
+        )
+    }
 
     // Obtener balance desde UserViewModel
     val userViewModel: UserViewModel = viewModel()

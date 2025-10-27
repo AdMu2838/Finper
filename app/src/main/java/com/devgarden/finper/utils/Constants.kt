@@ -1,5 +1,9 @@
 package com.devgarden.finper.utils
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
+import androidx.compose.ui.graphics.vector.ImageVector
+
 /**
  * Constantes globales de la aplicación.
  * Centraliza todos los valores constantes para facilitar el mantenimiento.
@@ -32,6 +36,35 @@ object Constants {
         const val DEFAULT_BALANCE = 0.0
         const val DEFAULT_CATEGORY = "Otros"
         const val EMPTY_BALANCE_TEXT = "S/.0.00"
+
+        // Categorías predefinidas (9 categorías disponibles)
+        val PREDEFINED_CATEGORIES = listOf(
+            "Comida",
+            "Transporte",
+            "Medicina",
+            "Comestibles",
+            "Alquiler",
+            "Regalos",
+            "Ahorros",
+            "Entretenimiento",
+            "Otros"
+        )
+
+        // Mapeo de categorías a iconos
+        fun getCategoryIcon(category: String): ImageVector {
+            return when (category) {
+                "Comida" -> Icons.Default.Restaurant
+                "Transporte" -> Icons.Default.DirectionsBus
+                "Medicina" -> Icons.Default.LocalHospital
+                "Comestibles" -> Icons.Default.ShoppingBasket
+                "Alquiler" -> Icons.Default.Home
+                "Regalos" -> Icons.Default.CardGiftcard
+                "Ahorros" -> Icons.Default.Savings
+                "Entretenimiento" -> Icons.Default.Movie
+                "Otros" -> Icons.Default.Add
+                else -> Icons.Default.Add
+            }
+        }
     }
 
     // --- Mensajes de Error ---
