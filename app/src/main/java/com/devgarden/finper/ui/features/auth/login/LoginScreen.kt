@@ -1,6 +1,7 @@
 package com.devgarden.finper.ui.features.auth.login
 
 import com.devgarden.finper.ui.theme.FinperTheme
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -15,6 +16,8 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -261,37 +264,91 @@ fun LoginScreen(
             }
         }
 
-        // Overlay de carga con animación
+        // Overlay de carga con animación mejorada
         if (isLoading) {
+            // Animaciones
+            val infiniteTransition = rememberInfiniteTransition(label = "loading")
+
+            // Animación de escala pulsante para la tarjeta
+            val scale by infiniteTransition.animateFloat(
+                initialValue = 0.95f,
+                targetValue = 1.05f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(800, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "scale"
+            )
+
+            // Animación de opacidad para el texto
+            val alpha by infiniteTransition.animateFloat(
+                initialValue = 0.5f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(600, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse
+                ),
+                label = "alpha"
+            )
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.4f)),
+                    .background(Color.Black.copy(alpha = 0.5f)),
                 contentAlignment = Alignment.Center
             ) {
                 Card(
                     modifier = Modifier
-                        .size(120.dp),
-                    shape = RoundedCornerShape(16.dp),
+                        .size(160.dp)
+                        .scale(scale),
+                    shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(containerColor = Color.White),
-                    elevation = CardDefaults.cardElevation(8.dp)
+                    elevation = CardDefaults.cardElevation(12.dp)
                 ) {
                     Column(
                         modifier = Modifier.fillMaxSize(),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(48.dp),
-                            color = PrimaryGreen,
-                            strokeWidth = 4.dp
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        // Círculo de progreso con animación
+                        Box(
+                            modifier = Modifier.size(64.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(64.dp),
+                                color = PrimaryGreen,
+                                strokeWidth = 5.dp
+                            )
+
+                            // Círculo interior para efecto visual
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .background(
+                                        PrimaryGreen.copy(alpha = 0.1f),
+                                        shape = androidx.compose.foundation.shape.CircleShape
+                                    )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         Text(
                             text = "Ingresando...",
                             color = DarkTextColor,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.alpha(alpha)
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        Text(
+                            text = "Por favor espera",
+                            color = GrayTextColor,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium
+                            modifier = Modifier.alpha(alpha * 0.8f)
                         )
                     }
                 }

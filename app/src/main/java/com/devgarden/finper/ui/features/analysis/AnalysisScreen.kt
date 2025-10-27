@@ -13,7 +13,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -50,7 +49,9 @@ fun AnalysisScreen(
     var selectedPeriod by remember { mutableStateOf(0) } // por defecto Diario
 
     // Para el período mensual, controlar qué semestre mostrar (0=Ene-Jun, 1=Jul-Dic)
-    var monthSemester by remember { mutableStateOf(0) }
+    // Inicializar según el mes actual: 0-5 = primer semestre, 6-11 = segundo semestre
+    val currentMonth = remember { Calendar.getInstance().get(Calendar.MONTH) }
+    var monthSemester by remember { mutableStateOf(if (currentMonth < 6) 0 else 1) }
 
     // DebouncedSelected usado para aplicar la lógica (evita cambiar listeners muy rápido)
     var debouncedSelected by remember { mutableStateOf(selectedPeriod) }
@@ -265,7 +266,7 @@ private fun ChartLegend() {
     }
 }
 
-// Gráfico de barras mejorado con ingresos y gastos separados
+// Gráfico de barras mejorado con ingresos y gastos separados (horizontal)
 @Composable
 private fun ImprovedBarChart(
     data: List<ChartDataPoint>,
@@ -293,43 +294,18 @@ private fun ImprovedBarChart(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Área del gráfico
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(280.dp)
+            // Área del gráfico horizontal
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Gráfico de barras
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxSize(),
-                            verticalAlignment = Alignment.Bottom,
-                            horizontalArrangement = Arrangement.SpaceEvenly
-                        ) {
-                            data.forEach { dataPoint ->
-                                BarGroup(
-                                    label = dataPoint.label,
-                                    income = dataPoint.income,
-                                    expense = dataPoint.expense,
-                                    maxValue = maxValue,
-                                    modifier = Modifier.weight(1f)
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Línea de referencia
-                    HorizontalDivider(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color.LightGray,
-                        thickness = 1.dp
+                data.forEachIndexed { index, dataPoint ->
+                    HorizontalBarGroup(
+                        label = dataPoint.label,
+                        income = dataPoint.income,
+                        expense = dataPoint.expense,
+                        maxValue = maxValue,
+                        isLast = index == data.size - 1
                     )
                 }
             }
@@ -337,89 +313,129 @@ private fun ImprovedBarChart(
     }
 }
 
-// Grupo de barras (una para ingresos, otra para gastos)
+// Grupo de barras horizontales (una para ingresos, otra para gastos)
 @Composable
-private fun BarGroup(
+private fun HorizontalBarGroup(
     label: String,
     income: Double,
     expense: Double,
     maxValue: Double,
-    modifier: Modifier = Modifier
+    isLast: Boolean = false
 ) {
-    val incomeHeight = if (maxValue > 0) ((income / maxValue) * 200).dp else 0.dp
-    val expenseHeight = if (maxValue > 0) ((expense / maxValue) * 200).dp else 0.dp
+    val incomeWidth = if (maxValue > 0) (income / maxValue).toFloat() else 0f
+    val expenseWidth = if (maxValue > 0) (expense / maxValue).toFloat() else 0f
 
     Column(
-        modifier = modifier,
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Bottom
+        modifier = Modifier.fillMaxWidth()
     ) {
-        // Las dos barras
-        Row(
-            modifier = Modifier.height(200.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            // Barra de Ingresos
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Bottom
-            ) {
-                if (income > 0) {
-                    Text(
-                        text = formatCurrencyShort(income),
-                        fontSize = 10.sp,
-                        color = Color(0xFF00C896),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .width(14.dp)
-                        .height(incomeHeight)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                        .background(Color(0xFF00C896))
-                        .shadow(2.dp, RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                )
-            }
-
-            // Barra de Gastos
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Bottom
-            ) {
-                if (expense > 0) {
-                    Text(
-                        text = formatCurrencyShort(expense),
-                        fontSize = 10.sp,
-                        color = Color(0xFFFF6B6B),
-                        fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    )
-                }
-                Box(
-                    modifier = Modifier
-                        .width(14.dp)
-                        .height(expenseHeight)
-                        .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                        .background(Color(0xFFFF6B6B))
-                        .shadow(2.dp, RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Etiqueta
+        // Etiqueta del período
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             color = Color.DarkGray,
-            textAlign = TextAlign.Center,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.width(40.dp)
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 4.dp)
         )
+
+        // Barra de Ingresos
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Ing:",
+                fontSize = 11.sp,
+                color = Color(0xFF00C896),
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.width(32.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(24.dp)
+                    .background(Color(0xFFE8F5F1), RoundedCornerShape(12.dp))
+            ) {
+                if (income > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(incomeWidth)
+                            .fillMaxHeight()
+                            .background(
+                                Color(0xFF00C896),
+                                RoundedCornerShape(12.dp)
+                            )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = formatCurrencyShort(income),
+                fontSize = 11.sp,
+                color = Color(0xFF00C896),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.width(50.dp),
+                textAlign = TextAlign.End
+            )
+        }
+
+        Spacer(modifier = Modifier.height(4.dp))
+
+        // Barra de Gastos
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Gas:",
+                fontSize = 11.sp,
+                color = Color(0xFFFF6B6B),
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.width(32.dp)
+            )
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(24.dp)
+                    .background(Color(0xFFFFF0F0), RoundedCornerShape(12.dp))
+            ) {
+                if (expense > 0) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(expenseWidth)
+                            .fillMaxHeight()
+                            .background(
+                                Color(0xFFFF6B6B),
+                                RoundedCornerShape(12.dp)
+                            )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            Text(
+                text = formatCurrencyShort(expense),
+                fontSize = 11.sp,
+                color = Color(0xFFFF6B6B),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.width(50.dp),
+                textAlign = TextAlign.End
+            )
+        }
+
+        // Línea divisoria entre grupos
+        if (!isLast) {
+            Spacer(modifier = Modifier.height(4.dp))
+            HorizontalDivider(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color.LightGray.copy(alpha = 0.3f),
+                thickness = 0.5.dp
+            )
+        }
     }
 }
 
@@ -567,15 +583,30 @@ private fun groupTransactionsForPeriodSeparated(
                 ChartDataPoint(label, incomes[index], expenses[index])
             }
         }
-        3 -> { // Anual -> últimos 5 años
+        3 -> { // Anual -> 5 años desde 2025 en adelante
             val result = mutableListOf<ChartDataPoint>()
-            val cal = Calendar.getInstance()
-            cal.add(Calendar.YEAR, -4)
-            repeat(5) {
-                val y = cal.get(Calendar.YEAR)
-                val startCal = Calendar.getInstance(); startCal.set(Calendar.YEAR, y); startCal.set(Calendar.DAY_OF_YEAR, 1); startCal.set(Calendar.HOUR_OF_DAY, 0); startCal.set(Calendar.MINUTE, 0); startCal.set(Calendar.SECOND, 0); startCal.set(Calendar.MILLISECOND, 0)
-                val endCal = Calendar.getInstance(); endCal.set(Calendar.YEAR, y); endCal.set(Calendar.MONTH, 11); endCal.set(Calendar.DAY_OF_MONTH, 31); endCal.set(Calendar.HOUR_OF_DAY, 23); endCal.set(Calendar.MINUTE, 59); endCal.set(Calendar.SECOND, 59); endCal.set(Calendar.MILLISECOND, 999)
+            val currentYear = Calendar.getInstance().get(Calendar.YEAR)
+            val startYear = maxOf(2025, currentYear) // Comenzar desde 2025 o el año actual, lo que sea mayor
+
+            repeat(5) { index ->
+                val y = startYear + index
+                val startCal = Calendar.getInstance()
+                startCal.set(Calendar.YEAR, y)
+                startCal.set(Calendar.DAY_OF_YEAR, 1)
+                startCal.set(Calendar.HOUR_OF_DAY, 0)
+                startCal.set(Calendar.MINUTE, 0)
+                startCal.set(Calendar.SECOND, 0)
+                startCal.set(Calendar.MILLISECOND, 0)
                 val start = startCal.time
+
+                val endCal = Calendar.getInstance()
+                endCal.set(Calendar.YEAR, y)
+                endCal.set(Calendar.MONTH, 11)
+                endCal.set(Calendar.DAY_OF_MONTH, 31)
+                endCal.set(Calendar.HOUR_OF_DAY, 23)
+                endCal.set(Calendar.MINUTE, 59)
+                endCal.set(Calendar.SECOND, 59)
+                endCal.set(Calendar.MILLISECOND, 999)
                 val end = endCal.time
 
                 val yearTransactions = transactions.filter { it.date != null && it.date in start..end }
@@ -587,7 +618,6 @@ private fun groupTransactionsForPeriodSeparated(
                     income = income,
                     expense = expense
                 ))
-                cal.add(Calendar.YEAR, 1)
             }
             return result
         }
@@ -686,7 +716,12 @@ private fun periodYearRange(now: Date): Pair<Date, Date> {
 private fun periodMultiYearRange(now: Date): Pair<Date, Date> {
     val cal = Calendar.getInstance()
     cal.time = now
-    cal.add(Calendar.YEAR, -4)
+
+    // Comenzar desde 2025 o el año actual, lo que sea mayor
+    val currentYear = cal.get(Calendar.YEAR)
+    val startYear = maxOf(2025, currentYear)
+
+    cal.set(Calendar.YEAR, startYear)
     cal.set(Calendar.DAY_OF_YEAR, 1)
     cal.set(Calendar.HOUR_OF_DAY, 0)
     cal.set(Calendar.MINUTE, 0)
@@ -694,7 +729,8 @@ private fun periodMultiYearRange(now: Date): Pair<Date, Date> {
     cal.set(Calendar.MILLISECOND, 0)
     val start = cal.time
 
-    cal.time = now
+    // Fin: 5 años después del inicio
+    cal.set(Calendar.YEAR, startYear + 4)
     cal.set(Calendar.MONTH, 11)
     cal.set(Calendar.DAY_OF_MONTH, 31)
     cal.set(Calendar.HOUR_OF_DAY, 23)
@@ -702,6 +738,7 @@ private fun periodMultiYearRange(now: Date): Pair<Date, Date> {
     cal.set(Calendar.SECOND, 59)
     cal.set(Calendar.MILLISECOND, 999)
     val end = cal.time
+
     return Pair(start, end)
 }
 
