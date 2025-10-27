@@ -29,7 +29,7 @@ import com.google.android.gms.ads.MobileAds
 @Composable
 fun AdaptiveAdBanner(
     modifier: Modifier = Modifier,
-    testAdUnitId: String = "ca-app-pub-3940256099942544/6300978111" // ID de prueba de Google
+    testAdUnitId: String = "ca-app-pub-3992395861925484/6240865513" // ID de prueba de Google
 ) {
     val context = LocalContext.current
     var adLoaded by remember { mutableStateOf(false) }
