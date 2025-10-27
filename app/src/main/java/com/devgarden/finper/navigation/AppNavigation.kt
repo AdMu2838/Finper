@@ -328,6 +328,31 @@ fun AppNavigation(
             )
         }
 
+        // Pantalla EditProfile
+        composable(Screen.EditProfile.route) {
+            EditProfileScreen(
+                userViewModel = userViewModel,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        // Pantalla Security
+        composable(Screen.Security.route) {
+            SecurityScreen(
+                onBack = { navController.popBackStack() },
+                onBottomItemSelected = { index ->
+                    when (index) {
+                        0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                        1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
+                        2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
+                        3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                        4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                        else -> Unit
+                    }
+                }
+            )
+        }
+
         // Nueva pantalla: Transacciones (tercer botón)
         composable(Screen.Transactions.route) {
             TransactionsScreen(onBottomItemSelected = { idx ->
