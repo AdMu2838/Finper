@@ -30,6 +30,7 @@ import com.devgarden.finper.ui.features.profile.SecurityScreen
 import com.devgarden.finper.ui.features.categories.CategoriesScreen
 import com.devgarden.finper.ui.features.transactions.TransactionsScreen
 import com.devgarden.finper.ui.features.analysis.AnalysisScreen
+import com.devgarden.finper.ui.features.profile.SettingsScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
@@ -299,33 +300,14 @@ fun AppNavigation(userViewModel: UserViewModel) {
             }, onSecurity = {
                 // Navegar a la pantalla de seguridad
                 navController.navigate(Screen.Security.route)
+            }, onSettings = {
+                navController.navigate(Screen.Settings.route)
             })
         }
 
-        // Pantalla Edit Profile
-        composable(Screen.EditProfile.route) {
-            EditProfileScreen(userViewModel, onBack = {
-                navController.popBackStack()
-            })
-        }
-
-        // Pantalla Security
-        composable(Screen.Security.route) {
-            SecurityScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
-                when (index) {
-                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
-                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
-                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
-                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
-                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
-                    else -> Unit
-                }
-            })
-        }
-
-        // Pantalla Categories
-        composable(Screen.Categories.route) {
-            CategoriesScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
+        // Pantalla Settings (Ajustes)
+        composable(Screen.Settings.route) {
+            SettingsScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
                 when (index) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }

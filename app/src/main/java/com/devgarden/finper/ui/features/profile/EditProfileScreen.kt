@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -46,8 +47,7 @@ fun EditProfileContent(usuario: UsuarioActual?, onBack: () -> Unit = {}, onSave:
     var nombre by remember { mutableStateOf(usuario?.nombre ?: "") }
     var telefono by remember { mutableStateOf(usuario?.telefono ?: "") }
     var correo by remember { mutableStateOf(usuario?.correo ?: "") }
-    var notificationsEnabled by remember { mutableStateOf(true) }
-    var darkModeEnabled by remember { mutableStateOf(false) }
+    // Notificaciones y modo oscuro se han movido a SettingsScreen.kt
     var isSaving by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier
@@ -59,7 +59,7 @@ fun EditProfileContent(usuario: UsuarioActual?, onBack: () -> Unit = {}, onSave:
             title = { Text(text = "Editar mi Perfil", fontSize = 18.sp) },
             navigationIcon = {
                 IconButton(onClick = { onBack() }) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                 }
             },
             colors = TopAppBarDefaults.topAppBarColors(containerColor = PrimaryGreen, titleContentColor = MaterialTheme.colorScheme.onPrimary)
@@ -104,18 +104,7 @@ fun EditProfileContent(usuario: UsuarioActual?, onBack: () -> Unit = {}, onSave:
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "Notificaciones", modifier = Modifier.weight(1f))
-                    Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text(text = "Activar Modo Oscuro", modifier = Modifier.weight(1f))
-                    Switch(checked = darkModeEnabled, onCheckedChange = { darkModeEnabled = it })
-                }
-
+                // Los toggles de Notificaciones y Modo Oscuro han sido movidos a la pantalla de Ajustes.
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Button(

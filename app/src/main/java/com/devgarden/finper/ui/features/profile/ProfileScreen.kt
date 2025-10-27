@@ -33,13 +33,14 @@ fun ProfileScreen(
     onBottomItemSelected: (Int) -> Unit = {},
     onLogout: () -> Unit = {},
     onEditProfile: () -> Unit = {},
-    onSecurity: () -> Unit = {} // nuevo callback para navegar a Seguridad
+    onSecurity: () -> Unit = {}, // nuevo callback para navegar a Seguridad
+    onSettings: () -> Unit = {} // nuevo callback para navegar a Ajustes
 ) {
     val usuario = userViewModel.usuario
     ProfileScreenContent(usuario = usuario, onBottomItemSelected = onBottomItemSelected, onLogout = {
         userViewModel.cerrarSesion()
         onLogout()
-    }, onEditProfile = onEditProfile, onSecurity = onSecurity)
+    }, onEditProfile = onEditProfile, onSecurity = onSecurity, onSettings = onSettings)
 }
 
 @Composable
@@ -48,7 +49,8 @@ private fun ProfileScreenContent(
     onBottomItemSelected: (Int) -> Unit = {},
     onLogout: () -> Unit = {},
     onEditProfile: () -> Unit = {},
-    onSecurity: () -> Unit = {}
+    onSecurity: () -> Unit = {},
+    onSettings: () -> Unit = {}
 ) {
     var bottomSelected by remember { mutableIntStateOf(4) } // perfil seleccionado
     val effectiveName = when {
@@ -112,7 +114,7 @@ private fun ProfileScreenContent(
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileMenuItem(icon = Icons.Default.Security, label = "Seguridad") { onSecurity() }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
-                    ProfileMenuItem(icon = Icons.Default.Settings, label = "Ajustes")
+                    ProfileMenuItem(icon = Icons.Default.Settings, label = "Ajustes") { onSettings() }
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
                     ProfileMenuItem(icon = Icons.Default.HelpOutline, label = "Ayuda")
                     HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
