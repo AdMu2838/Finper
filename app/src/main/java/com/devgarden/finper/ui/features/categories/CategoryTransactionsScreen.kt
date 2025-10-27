@@ -92,7 +92,7 @@ fun CategoryTransactionsScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(Color(0xFF00B984))
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(top = 24.dp, bottom = 16.dp)
             ) {
                 Row(

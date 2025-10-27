@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -168,8 +169,9 @@ fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
     ) {
         Card(
             modifier = Modifier
-                .size(72.dp)
-                .clip(RoundedCornerShape(16.dp)),
+                .size(100.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .padding(8.dp),
             colors = CardDefaults.cardColors(containerColor = Color(0xFFE6F6F2)),
             elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
         ) {
@@ -177,13 +179,15 @@ fun CategoryItem(category: Category, onClick: () -> Unit = {}) {
                 Icon(
                     category.icon,
                     contentDescription = category.label,
-                    tint = Color(0xFF007A4F),
+                    tint = MaterialTheme.colorScheme.surfaceTint,
                     modifier = Modifier.size(32.dp)
                 )
             }
         }
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = category.label, fontSize = 12.sp, color = Color(0xFF15323B))
+        Text(text = category.label, fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.tertiary)
     }
 }
 
