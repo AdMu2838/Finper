@@ -18,21 +18,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import com.devgarden.finper.ui.components.BottomBar
 import com.devgarden.finper.ui.theme.PrimaryGreen
+import com.devgarden.finper.ui.viewmodel.ThemeViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
+    themeViewModel: ThemeViewModel,
     onBack: () -> Unit = {},
     onBottomItemSelected: (Int) -> Unit = {}
 ) {
     var bottomSelected by remember { mutableIntStateOf(4) }
     var notificationsEnabled by rememberSaveable { mutableStateOf(true) }
-    var darkModeEnabled by rememberSaveable { mutableStateOf(false) }
+    val isDarkMode by themeViewModel.isDarkMode.collectAsState()
 
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF0F4F7))
+            .background(MaterialTheme.colorScheme.background)
     ) {
         Column(modifier = Modifier
             .fillMaxSize()
@@ -43,7 +45,7 @@ fun SettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))
-                    .background(PrimaryGreen)
+                    .background(MaterialTheme.colorScheme.primary)
                     .padding(start = 18.dp, end = 16.dp, top = 24.dp, bottom = 15.dp)
             ) {
                 Row(
@@ -70,23 +72,42 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                 elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(modifier = Modifier.padding(20.dp)) {
-                    Text(text = "Preferencias", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Preferencias",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "Notificaciones", modifier = Modifier.weight(1f))
-                        Switch(checked = notificationsEnabled, onCheckedChange = { notificationsEnabled = it })
+                        Text(
+                            text = "Notificaciones",
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = notificationsEnabled,
+                            onCheckedChange = { notificationsEnabled = it }
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Text(text = "Activar Modo Oscuro", modifier = Modifier.weight(1f))
-                        Switch(checked = darkModeEnabled, onCheckedChange = { darkModeEnabled = it })
+                        Text(
+                            text = "Modo Oscuro",
+                            modifier = Modifier.weight(1f),
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Switch(
+                            checked = isDarkMode,
+                            onCheckedChange = { themeViewModel.setDarkMode(it) }
+                        )
                     }
                 }
             }

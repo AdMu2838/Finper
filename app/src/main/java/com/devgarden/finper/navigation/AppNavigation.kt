@@ -32,19 +32,24 @@ import com.devgarden.finper.ui.features.transactions.TransactionsScreen
 import com.devgarden.finper.ui.features.analysis.AnalysisScreen
 import com.devgarden.finper.ui.features.profile.SettingsScreen
 import com.devgarden.finper.ui.viewmodel.UserViewModel
+import com.devgarden.finper.ui.viewmodel.ThemeViewModel
 import com.google.android.gms.common.api.ApiException
 import com.google.firebase.auth.FirebaseAuth
 
 
 @Composable
 fun AppNavigation() {
-    // Compatibilidad con llamadas anteriores: crear el UserViewModel y delegar
+    // Compatibilidad con llamadas anteriores: crear los ViewModels y delegar
     val userViewModel: UserViewModel = viewModel()
-    AppNavigation(userViewModel)
+    val themeViewModel: ThemeViewModel = viewModel()
+    AppNavigation(userViewModel, themeViewModel)
 }
 
 @Composable
-fun AppNavigation(userViewModel: UserViewModel) {
+fun AppNavigation(
+    userViewModel: UserViewModel,
+    themeViewModel: ThemeViewModel
+) {
     val context = LocalContext.current
     val navController = rememberNavController()
 
@@ -307,16 +312,20 @@ fun AppNavigation(userViewModel: UserViewModel) {
 
         // Pantalla Settings (Ajustes)
         composable(Screen.Settings.route) {
-            SettingsScreen(onBack = { navController.popBackStack() }, onBottomItemSelected = { index ->
-                when (index) {
-                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
-                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
-                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
-                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
-                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
-                    else -> Unit
+            SettingsScreen(
+                themeViewModel = themeViewModel,
+                onBack = { navController.popBackStack() },
+                onBottomItemSelected = { index ->
+                    when (index) {
+                        0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                        1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
+                        2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
+                        3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                        4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                        else -> Unit
+                    }
                 }
-            })
+            )
         }
 
         // Nueva pantalla: Transacciones (tercer botón)
@@ -336,6 +345,20 @@ fun AppNavigation(userViewModel: UserViewModel) {
         // Pantalla Analysis (nuevo, índice 1)
         composable(Screen.Analysis.route) {
             AnalysisScreen(onBack = { navController.popBackStack() }, selectedIndex = 1, onBottomItemSelected = { idx ->
+                when (idx) {
+                    0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
+                    1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
+                    2 -> navController.navigate(Screen.Transactions.route) { launchSingleTop = true }
+                    3 -> navController.navigate(Screen.Categories.route) { launchSingleTop = true }
+                    4 -> navController.navigate(Screen.Profile.route) { launchSingleTop = true }
+                    else -> Unit
+                }
+            })
+        }
+
+        // Pantalla Categories (cuarto botón)
+        composable(Screen.Categories.route) {
+            CategoriesScreen(onBottomItemSelected = { idx ->
                 when (idx) {
                     0 -> navController.navigate(Screen.Home.route) { launchSingleTop = true }
                     1 -> navController.navigate(Screen.Analysis.route) { launchSingleTop = true }
